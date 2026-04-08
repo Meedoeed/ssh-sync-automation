@@ -1,0 +1,49 @@
+package server
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+
+	"github.com/Meedoeed/ssh-sync-automation/internal/config"
+	"github.com/Meedoeed/ssh-sync-automation/internal/handler"
+	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
+	myMiddleware "github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/middleware"
+)
+
+type HTTPServer struct {
+	echo   *echo.Echo
+	config *config.Config
+}
+
+func NewHTTP(cfg *config.Config) *HTTPServer {
+	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
+
+	e.Use(middleware.Recover())
+	e.Use(middleware.RequestID())
+	e.Use(myMiddleware.EchoLogger())
+
+	// Регистрация роутов
+	healthHandler := handler.NewHealthHandler()
+	handler.RegisterRoutes(e, healthHandler)
+
+	return &HTTPServer{
+		echo:   e,
+		config: cfg,
+	}
+}
+
+func (s *HTTPServer) Start() error {
+	addr := fmt.Sprintf(":%s", s.config.Server.Port)
+	logger.Get().Info().Msgf("Starting HTTP server on %s", addr)
+	return s.echo.Start(addr)
+}
+
+func (s *HTTPServer) Shutdown(ctx context.Context) error {
+	logger.Get().Info().Msg("Shutting down HTTP server...")
+	return s.echo.Shutdown(ctx)
+}
