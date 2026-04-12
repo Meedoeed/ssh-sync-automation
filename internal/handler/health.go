@@ -3,13 +3,16 @@ package handler
 import (
 	"net/http"
 
+	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
 	"github.com/labstack/echo/v4"
 )
 
-type HealthHandler struct{}
+type HealthHandler struct {
+	db *postgres.DB
+}
 
-func NewHealthHandler() *HealthHandler {
-	return &HealthHandler{}
+func NewHealthHandler(db *postgres.DB) *HealthHandler {
+	return &HealthHandler{db: db}
 }
 
 func (h *HealthHandler) Liveness(c echo.Context) error {
@@ -17,7 +20,19 @@ func (h *HealthHandler) Liveness(c echo.Context) error {
 }
 
 func (h *HealthHandler) Readiness(c echo.Context) error {
-	// TODO после реализации БД
-	// проверять статус БД
+	if h.db == nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{
+			"status": "not ready",
+			"reason": "database not initialized",
+		})
+	}
+
+	if err := h.db.Ping(c.Request().Context()); err != nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{
+			"status": "not ready",
+			"reason": "database unavailable: " + err.Error(),
+		})
+	}
+
 	return c.JSON(http.StatusOK, map[string]string{"status": "ready"})
 }
