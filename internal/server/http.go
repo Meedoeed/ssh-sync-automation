@@ -11,14 +11,16 @@ import (
 	"github.com/Meedoeed/ssh-sync-automation/internal/handler"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	myMiddleware "github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/middleware"
+	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
 )
 
 type HTTPServer struct {
 	echo   *echo.Echo
 	config *config.Config
+	db     *postgres.DB
 }
 
-func NewHTTP(cfg *config.Config) *HTTPServer {
+func NewHTTP(cfg *config.Config, db *postgres.DB) *HTTPServer {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
@@ -27,13 +29,13 @@ func NewHTTP(cfg *config.Config) *HTTPServer {
 	e.Use(middleware.RequestID())
 	e.Use(myMiddleware.EchoLogger())
 
-	// Регистрация роутов
-	healthHandler := handler.NewHealthHandler()
+	healthHandler := handler.NewHealthHandler(db)
 	handler.RegisterRoutes(e, healthHandler)
 
 	return &HTTPServer{
 		echo:   e,
 		config: cfg,
+		db:     db,
 	}
 }
 
