@@ -1,9 +1,11 @@
+// internal/storage/postgres/server_repo.go
 package postgres
 
 import (
 	"context"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
+	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/encryption"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -11,19 +13,44 @@ import (
 )
 
 type ServerRepo struct {
-	db *pgxpool.Pool
+	db        *pgxpool.Pool
+	encryptor *encryption.Encryptor // Добавляем
 }
 
-func NewServerRepo(db *pgxpool.Pool) *ServerRepo {
-	return &ServerRepo{db: db}
+func NewServerRepo(db *pgxpool.Pool, encryptor *encryption.Encryptor) *ServerRepo {
+	return &ServerRepo{
+		db:        db,
+		encryptor: encryptor,
+	}
 }
 
 func (r *ServerRepo) Create(ctx context.Context, server *domain.Server) error {
+	// Шифруем пароль и ключ перед сохранением
+	var encryptedPassword, encryptedPrivateKey *string
+
+	if server.Password != nil && *server.Password != "" {
+		encrypted, err := r.encryptor.Encrypt(*server.Password)
+		if err != nil {
+			logger.Get().Error().Err(err).Msg("Failed to encrypt password")
+			return err
+		}
+		encryptedPassword = &encrypted
+	}
+
+	if server.PrivateKey != nil && *server.PrivateKey != "" {
+		encrypted, err := r.encryptor.Encrypt(*server.PrivateKey)
+		if err != nil {
+			logger.Get().Error().Err(err).Msg("Failed to encrypt private key")
+			return err
+		}
+		encryptedPrivateKey = &encrypted
+	}
+
 	query := `
-		INSERT INTO servers (id, name, host, port, username, auth_type, password, private_key, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING created_at, updated_at
-	`
+        INSERT INTO servers (id, name, host, port, username, auth_type, password, private_key, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING created_at, updated_at
+    `
 
 	if server.ID == uuid.Nil {
 		server.ID = uuid.New()
@@ -36,8 +63,8 @@ func (r *ServerRepo) Create(ctx context.Context, server *domain.Server) error {
 		server.Port,
 		server.Username,
 		server.AuthType,
-		server.Password,
-		server.PrivateKey,
+		encryptedPassword,   // Сохраняем зашифрованным
+		encryptedPrivateKey, // Сохраняем зашифрованным
 		server.IsActive,
 	).Scan(&server.CreatedAt, &server.UpdatedAt)
 
@@ -49,23 +76,24 @@ func (r *ServerRepo) Create(ctx context.Context, server *domain.Server) error {
 		return err
 	}
 
-	logger.Get().Info().
-		Str("server_id", server.ID.String()).
-		Str("server_name", server.Name).
-		Msg("Server created")
+	// Очищаем чувствительные данные в памяти
+	server.Password = nil
+	server.PrivateKey = nil
 
 	return nil
 }
 
 func (r *ServerRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Server, error) {
 	query := `
-		SELECT id, name, host, port, username, auth_type, password, private_key,
-		       created_at, updated_at, last_seen, is_active
-		FROM servers
-		WHERE id = $1
-	`
+        SELECT id, name, host, port, username, auth_type, password, private_key,
+               created_at, updated_at, last_seen, is_active
+        FROM servers
+        WHERE id = $1
+    `
 
 	var server domain.Server
+	var encryptedPassword, encryptedPrivateKey *string
+
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&server.ID,
 		&server.Name,
@@ -73,8 +101,8 @@ func (r *ServerRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Server,
 		&server.Port,
 		&server.Username,
 		&server.AuthType,
-		&server.Password,
-		&server.PrivateKey,
+		&encryptedPassword,
+		&encryptedPrivateKey,
 		&server.CreatedAt,
 		&server.UpdatedAt,
 		&server.LastSeen,
@@ -86,6 +114,25 @@ func (r *ServerRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Server,
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	// Расшифровываем пароль и ключ
+	if encryptedPassword != nil && *encryptedPassword != "" {
+		decrypted, err := r.encryptor.Decrypt(*encryptedPassword)
+		if err != nil {
+			logger.Get().Error().Err(err).Msg("Failed to decrypt password")
+			return nil, err
+		}
+		server.Password = &decrypted
+	}
+
+	if encryptedPrivateKey != nil && *encryptedPrivateKey != "" {
+		decrypted, err := r.encryptor.Decrypt(*encryptedPrivateKey)
+		if err != nil {
+			logger.Get().Error().Err(err).Msg("Failed to decrypt private key")
+			return nil, err
+		}
+		server.PrivateKey = &decrypted
 	}
 
 	return &server, nil
@@ -93,13 +140,15 @@ func (r *ServerRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Server,
 
 func (r *ServerRepo) GetByName(ctx context.Context, name string) (*domain.Server, error) {
 	query := `
-		SELECT id, name, host, port, username, auth_type, password, private_key,
-		       created_at, updated_at, last_seen, is_active
-		FROM servers
-		WHERE name = $1
-	`
+        SELECT id, name, host, port, username, auth_type, password, private_key,
+               created_at, updated_at, last_seen, is_active
+        FROM servers
+        WHERE name = $1
+    `
 
 	var server domain.Server
+	var encryptedPassword, encryptedPrivateKey *string
+
 	err := r.db.QueryRow(ctx, query, name).Scan(
 		&server.ID,
 		&server.Name,
@@ -107,8 +156,8 @@ func (r *ServerRepo) GetByName(ctx context.Context, name string) (*domain.Server
 		&server.Port,
 		&server.Username,
 		&server.AuthType,
-		&server.Password,
-		&server.PrivateKey,
+		&encryptedPassword,
+		&encryptedPrivateKey,
 		&server.CreatedAt,
 		&server.UpdatedAt,
 		&server.LastSeen,
@@ -122,15 +171,83 @@ func (r *ServerRepo) GetByName(ctx context.Context, name string) (*domain.Server
 		return nil, err
 	}
 
+	// Расшифровываем
+	if encryptedPassword != nil && *encryptedPassword != "" {
+		decrypted, err := r.encryptor.Decrypt(*encryptedPassword)
+		if err != nil {
+			return nil, err
+		}
+		server.Password = &decrypted
+	}
+
+	if encryptedPrivateKey != nil && *encryptedPrivateKey != "" {
+		decrypted, err := r.encryptor.Decrypt(*encryptedPrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		server.PrivateKey = &decrypted
+	}
+
 	return &server, nil
 }
 
+func (r *ServerRepo) Update(ctx context.Context, server *domain.Server) error {
+	// Шифруем перед обновлением
+	var encryptedPassword, encryptedPrivateKey *string
+
+	if server.Password != nil && *server.Password != "" {
+		encrypted, err := r.encryptor.Encrypt(*server.Password)
+		if err != nil {
+			return err
+		}
+		encryptedPassword = &encrypted
+	}
+
+	if server.PrivateKey != nil && *server.PrivateKey != "" {
+		encrypted, err := r.encryptor.Encrypt(*server.PrivateKey)
+		if err != nil {
+			return err
+		}
+		encryptedPrivateKey = &encrypted
+	}
+
+	query := `
+        UPDATE servers
+        SET name = $2, host = $3, port = $4, username = $5,
+            auth_type = $6, password = $7, private_key = $8, is_active = $9
+        WHERE id = $1
+    `
+
+	_, err := r.db.Exec(ctx, query,
+		server.ID,
+		server.Name,
+		server.Host,
+		server.Port,
+		server.Username,
+		server.AuthType,
+		encryptedPassword,
+		encryptedPrivateKey,
+		server.IsActive,
+	)
+
+	if err != nil {
+		logger.Get().Error().
+			Err(err).
+			Str("server_id", server.ID.String()).
+			Msg("Failed to update server")
+		return err
+	}
+
+	return nil
+}
+
+// List и Delete остаются без изменений (не работают с sensitive данными)
 func (r *ServerRepo) List(ctx context.Context, activeOnly bool) ([]*domain.Server, error) {
 	query := `
-		SELECT id, name, host, port, username, auth_type, password, private_key,
-		       created_at, updated_at, last_seen, is_active
-		FROM servers
-	`
+        SELECT id, name, host, port, username, auth_type, 
+               created_at, updated_at, last_seen, is_active
+        FROM servers
+    `
 	if activeOnly {
 		query += " WHERE is_active = true"
 	}
@@ -152,8 +269,6 @@ func (r *ServerRepo) List(ctx context.Context, activeOnly bool) ([]*domain.Serve
 			&server.Port,
 			&server.Username,
 			&server.AuthType,
-			&server.Password,
-			&server.PrivateKey,
 			&server.CreatedAt,
 			&server.UpdatedAt,
 			&server.LastSeen,
@@ -162,65 +277,21 @@ func (r *ServerRepo) List(ctx context.Context, activeOnly bool) ([]*domain.Serve
 		if err != nil {
 			return nil, err
 		}
+		// Password и PrivateKey остаются nil в списке
 		servers = append(servers, &server)
 	}
 
 	return servers, nil
 }
 
-func (r *ServerRepo) Update(ctx context.Context, server *domain.Server) error {
-	query := `
-		UPDATE servers
-		SET name = $2, host = $3, port = $4, username = $5,
-		    auth_type = $6, password = $7, private_key = $8, is_active = $9
-		WHERE id = $1
-	`
-
-	_, err := r.db.Exec(ctx, query,
-		server.ID,
-		server.Name,
-		server.Host,
-		server.Port,
-		server.Username,
-		server.AuthType,
-		server.Password,
-		server.PrivateKey,
-		server.IsActive,
-	)
-
-	if err != nil {
-		logger.Get().Error().
-			Err(err).
-			Str("server_id", server.ID.String()).
-			Msg("Failed to update server")
-		return err
-	}
-
-	return nil
-}
-
 func (r *ServerRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM servers WHERE id = $1`
-
 	_, err := r.db.Exec(ctx, query, id)
-	if err != nil {
-		logger.Get().Error().
-			Err(err).
-			Str("server_id", id.String()).
-			Msg("Failed to delete server")
-		return err
-	}
-
-	logger.Get().Info().
-		Str("server_id", id.String()).
-		Msg("Server deleted")
-
-	return nil
+	return err
 }
 
 func (r *ServerRepo) UpdateLastSeen(ctx context.Context, id uuid.UUID) error {
 	query := `UPDATE servers SET last_seen = NOW() WHERE id = $1`
-
 	_, err := r.db.Exec(ctx, query, id)
 	return err
 }
