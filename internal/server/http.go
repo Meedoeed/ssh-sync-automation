@@ -9,18 +9,31 @@ import (
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/config"
 	"github.com/Meedoeed/ssh-sync-automation/internal/handler"
+	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/encryption"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	myMiddleware "github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/middleware"
+	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
 )
 
 type HTTPServer struct {
-	echo   *echo.Echo
-	config *config.Config
-	db     *postgres.DB
+	echo          *echo.Echo
+	config        *config.Config
+	db            *postgres.DB
+	encrytor      *encryption.Encryptor
+	serverService *service.ServerService
+	taskService   *service.TaskService
+	syncService   *service.SyncService
 }
 
-func NewHTTP(cfg *config.Config, db *postgres.DB) *HTTPServer {
+func NewHTTP(
+	cfg *config.Config,
+	db *postgres.DB,
+	encrytor *encryption.Encryptor,
+	serverService *service.ServerService,
+	taskService *service.TaskService,
+	syncService *service.SyncService,
+) *HTTPServer {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
@@ -33,9 +46,13 @@ func NewHTTP(cfg *config.Config, db *postgres.DB) *HTTPServer {
 	handler.RegisterRoutes(e, healthHandler)
 
 	return &HTTPServer{
-		echo:   e,
-		config: cfg,
-		db:     db,
+		echo:          e,
+		config:        cfg,
+		db:            db,
+		encrytor:      encrytor,
+		serverService: serverService,
+		taskService:   taskService,
+		syncService:   syncService,
 	}
 }
 
