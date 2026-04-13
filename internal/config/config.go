@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	Server   ServerCfg
-	Database DatabaseCfg
-	Sync     SyncCfg
-	Log      LogCfg
+	Server     ServerCfg
+	Database   DatabaseCfg
+	Sync       SyncCfg
+	Log        LogCfg
+	Encryption EncryptionCfg
 }
 
 type ServerCfg struct {
@@ -29,6 +30,10 @@ type DatabaseCfg struct {
 	MaxIdleConns    int
 	ConnMaxLifetime time.Duration
 	ConnMaxIdleTime time.Duration
+}
+
+type EncryptionCfg struct {
+	Key string
 }
 
 type SyncCfg struct {
@@ -69,6 +74,9 @@ func Load() *Config {
 		},
 		Log: LogCfg{
 			Level: getEnv("LOG_LEVEL", "info"),
+		},
+		Encryption: EncryptionCfg{
+			Key: getEnv("ENCRYPTION_KEY", ""),
 		},
 	}
 	return cfg
