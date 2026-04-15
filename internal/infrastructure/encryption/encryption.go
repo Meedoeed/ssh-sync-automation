@@ -9,11 +9,10 @@ import (
 )
 
 type Encryptor struct {
-	key []byte // 32 bytes для AES-256
+	key []byte 
 }
 
 func NewEncryptor(encryptionKey string) *Encryptor {
-	// Ключ должен быть из environment variable, не из кода!
 	return &Encryptor{key: []byte(encryptionKey)}
 }
 
@@ -37,8 +36,8 @@ func (e *Encryptor) Encrypt(plaintext string) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-func (e *Encryptor) Decrypt(ciphertext string) (string, error) {
-	data, err := base64.StdEncoding.DecodeString(ciphertext)
+func (e *Encryptor) Decrypt(hashed string) (string, error) {
+	data, err := base64.StdEncoding.DecodeString(hashed)
 	if err != nil {
 		return "", err
 	}
