@@ -15,6 +15,7 @@ import (
 	"github.com/Meedoeed/ssh-sync-automation/internal/server"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
+	"github.com/Meedoeed/ssh-sync-automation/internal/worker"
 	"github.com/joho/godotenv"
 )
 
@@ -53,7 +54,19 @@ func main() {
 	taskService := service.NewTaskService(taskRepo)
 	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")
 
-	httpServer := server.NewHTTP(cfg, db, encryptor, serverService, taskService, syncService)
+	workerPool := worker.NewPool(&worker.PoolConfig{
+		Interval:    cfg.Sync.Interval,
+		SyncCfg:     &cfg.Sync,
+		ServerRepo:  serverRepo,
+		StatusRepo:  statusRepo,
+		SyncService: syncService,
+	})
+
+	if err := workerPool.Start(ctx); err != nil {
+		logger.Get().Fatal().Err(err).Msg("Failed to start worker pool")
+	}
+
+	httpServer := server.NewHTTP(cfg, db, encryptor, serverService, taskService, syncService, workerPool)
 
 	go func() {
 		if err := httpServer.Start(); err != nil {
@@ -64,6 +77,8 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+
+	workerPool.StopAll()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
