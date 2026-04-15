@@ -63,8 +63,8 @@ func (r *ServerRepo) Create(ctx context.Context, server *domain.Server) error {
 		server.Port,
 		server.Username,
 		server.AuthType,
-		encryptedPassword,   // Сохраняем зашифрованным
-		encryptedPrivateKey, // Сохраняем зашифрованным
+		encryptedPassword,  
+		encryptedPrivateKey, 
 		server.IsActive,
 	).Scan(&server.CreatedAt, &server.UpdatedAt)
 
@@ -76,7 +76,6 @@ func (r *ServerRepo) Create(ctx context.Context, server *domain.Server) error {
 		return err
 	}
 
-	// Очищаем чувствительные данные в памяти
 	server.Password = nil
 	server.PrivateKey = nil
 
@@ -116,7 +115,6 @@ func (r *ServerRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Server,
 		return nil, err
 	}
 
-	// Расшифровываем пароль и ключ
 	if encryptedPassword != nil && *encryptedPassword != "" {
 		decrypted, err := r.encryptor.Decrypt(*encryptedPassword)
 		if err != nil {
@@ -171,7 +169,6 @@ func (r *ServerRepo) GetByName(ctx context.Context, name string) (*domain.Server
 		return nil, err
 	}
 
-	// Расшифровываем
 	if encryptedPassword != nil && *encryptedPassword != "" {
 		decrypted, err := r.encryptor.Decrypt(*encryptedPassword)
 		if err != nil {
@@ -192,7 +189,6 @@ func (r *ServerRepo) GetByName(ctx context.Context, name string) (*domain.Server
 }
 
 func (r *ServerRepo) Update(ctx context.Context, server *domain.Server) error {
-	// Шифруем перед обновлением
 	var encryptedPassword, encryptedPrivateKey *string
 
 	if server.Password != nil && *server.Password != "" {
@@ -241,7 +237,6 @@ func (r *ServerRepo) Update(ctx context.Context, server *domain.Server) error {
 	return nil
 }
 
-// List и Delete остаются без изменений (не работают с sensitive данными)
 func (r *ServerRepo) List(ctx context.Context, activeOnly bool) ([]*domain.Server, error) {
 	query := `
         SELECT id, name, host, port, username, auth_type, 
@@ -277,7 +272,6 @@ func (r *ServerRepo) List(ctx context.Context, activeOnly bool) ([]*domain.Serve
 		if err != nil {
 			return nil, err
 		}
-		// Password и PrivateKey остаются nil в списке
 		servers = append(servers, &server)
 	}
 

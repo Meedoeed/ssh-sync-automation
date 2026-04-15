@@ -49,7 +49,6 @@ func main() {
 	taskRepo := postgres.NewTaskRepo(db.Pool)
 	statusRepo := postgres.NewServerStatusRepo(db.Pool)
 
-	// Инициализация сервисов
 	serverService := service.NewServerService(serverRepo, statusRepo)
 	taskService := service.NewTaskService(taskRepo)
 	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")

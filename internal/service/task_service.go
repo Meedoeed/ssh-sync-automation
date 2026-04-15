@@ -22,14 +22,11 @@ func NewTaskService(taskRepo repository.TaskRepository) *TaskService {
 	}
 }
 
-// CreateTask создает новую задачу синхронизации
 func (s *TaskService) CreateTask(ctx context.Context, task *domain.SyncTask) error {
-	// Валидация
 	if err := s.validateTask(task); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Установка значений по умолчанию
 	if task.ID == uuid.Nil {
 		task.ID = uuid.New()
 	}
@@ -40,7 +37,6 @@ func (s *TaskService) CreateTask(ctx context.Context, task *domain.SyncTask) err
 		task.MaxAttempts = 5
 	}
 
-	// Создание задачи
 	if err := s.taskRepo.Create(ctx, task); err != nil {
 		return fmt.Errorf("failed to create task: %w", err)
 	}
@@ -55,7 +51,6 @@ func (s *TaskService) CreateTask(ctx context.Context, task *domain.SyncTask) err
 	return nil
 }
 
-// GetTask возвращает задачу по ID
 func (s *TaskService) GetTask(ctx context.Context, id uuid.UUID) (*domain.SyncTask, error) {
 	task, err := s.taskRepo.GetByID(ctx, id)
 	if err != nil {
@@ -67,7 +62,6 @@ func (s *TaskService) GetTask(ctx context.Context, id uuid.UUID) (*domain.SyncTa
 	return task, nil
 }
 
-// ListServerTasks возвращает задачи сервера
 func (s *TaskService) ListServerTasks(ctx context.Context, serverID uuid.UUID, status *domain.SyncStatus, limit int) ([]*domain.SyncTask, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
@@ -80,7 +74,6 @@ func (s *TaskService) ListServerTasks(ctx context.Context, serverID uuid.UUID, s
 	return tasks, nil
 }
 
-// GetPendingTasks возвращает ожидающие задачи
 func (s *TaskService) GetPendingTasks(ctx context.Context, limit int) ([]*domain.SyncTask, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 10
@@ -93,7 +86,6 @@ func (s *TaskService) GetPendingTasks(ctx context.Context, limit int) ([]*domain
 	return tasks, nil
 }
 
-// StartTask начинает выполнение задачи
 func (s *TaskService) StartTask(ctx context.Context, id uuid.UUID) error {
 	task, err := s.taskRepo.GetByID(ctx, id)
 	if err != nil {
@@ -122,7 +114,6 @@ func (s *TaskService) StartTask(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// UpdateTaskProgress обновляет прогресс задачи
 func (s *TaskService) UpdateTaskProgress(ctx context.Context, id uuid.UUID, bytesTransferred int64) error {
 	if err := s.taskRepo.UpdateProgress(ctx, id, bytesTransferred); err != nil {
 		return fmt.Errorf("failed to update progress: %w", err)
@@ -130,7 +121,6 @@ func (s *TaskService) UpdateTaskProgress(ctx context.Context, id uuid.UUID, byte
 	return nil
 }
 
-// CompleteTask завершает задачу успехом
 func (s *TaskService) CompleteTask(ctx context.Context, id uuid.UUID) error {
 	task, err := s.taskRepo.GetByID(ctx, id)
 	if err != nil {
@@ -157,7 +147,6 @@ func (s *TaskService) CompleteTask(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// FailTask завершает задачу ошибкой
 func (s *TaskService) FailTask(ctx context.Context, id uuid.UUID, errMsg string) error {
 	task, err := s.taskRepo.GetByID(ctx, id)
 	if err != nil {
@@ -170,7 +159,6 @@ func (s *TaskService) FailTask(ctx context.Context, id uuid.UUID, errMsg string)
 	task.AttemptCount++
 
 	if task.AttemptCount >= task.MaxAttempts {
-		// Превышено максимальное количество попыток
 		now := time.Now()
 		task.Status = domain.StatusFailed
 		task.CompletedAt = &now
@@ -183,7 +171,6 @@ func (s *TaskService) FailTask(ctx context.Context, id uuid.UUID, errMsg string)
 			Str("error", errMsg).
 			Msg("Task failed permanently")
 	} else {
-		// Можно повторить позже
 		task.Status = domain.StatusPending
 		task.ErrorMessage = &errMsg
 
@@ -201,7 +188,6 @@ func (s *TaskService) FailTask(ctx context.Context, id uuid.UUID, errMsg string)
 	return nil
 }
 
-// CancelTask отменяет задачу
 func (s *TaskService) CancelTask(ctx context.Context, id uuid.UUID) error {
 	task, err := s.taskRepo.GetByID(ctx, id)
 	if err != nil {
@@ -230,7 +216,6 @@ func (s *TaskService) CancelTask(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// CleanupOldTasks удаляет старые завершенные задачи
 func (s *TaskService) CleanupOldTasks(ctx context.Context, olderThan time.Duration) (int64, error) {
 	count, err := s.taskRepo.DeleteCompletedOlderThan(ctx, olderThan)
 	if err != nil {
@@ -247,7 +232,6 @@ func (s *TaskService) CleanupOldTasks(ctx context.Context, olderThan time.Durati
 	return count, nil
 }
 
-// validateTask валидирует задачу
 func (s *TaskService) validateTask(task *domain.SyncTask) error {
 	if task.ServerID == uuid.Nil {
 		return fmt.Errorf("server_id is required")

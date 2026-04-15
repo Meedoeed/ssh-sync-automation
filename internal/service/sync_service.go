@@ -35,9 +35,7 @@ func NewSyncService(
 	}
 }
 
-// SyncServer выполняет синхронизацию для конкретного сервера
 func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshClient infrastructure.SSHClientInterface) error {
-	// Получаем сервер
 	server, err := s.serverRepo.GetByID(ctx, serverID)
 	if err != nil {
 		return fmt.Errorf("failed to get server: %w", err)
@@ -51,16 +49,13 @@ func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshCli
 		Str("server_name", server.Name).
 		Msg("Starting sync for server")
 
-	// 1. Синхронизация download (забираем файлы из done/)
 	if err := s.syncDownload(ctx, server, sshClient); err != nil {
 		logger.Get().Error().
 			Err(err).
 			Str("server_id", serverID.String()).
 			Msg("Download sync failed")
-		// Не возвращаем ошибку, продолжаем с upload
 	}
 
-	// 2. Синхронизация upload (отправляем файлы в tasks/)
 	if err := s.syncUpload(ctx, server, sshClient); err != nil {
 		logger.Get().Error().
 			Err(err).
@@ -77,20 +72,16 @@ func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshCli
 	return nil
 }
 
-// syncDownload забирает файлы из удаленной done/ директории
 func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, sshClient infrastructure.SSHClientInterface) error {
 	remotePath := "done/"
 	localPath := filepath.Join(s.baseLocalDir, "done", server.Name)
 
-	// Создаем локальную директорию
 	if err := os.MkdirAll(localPath, 0755); err != nil {
 		return fmt.Errorf("failed to create local directory: %w", err)
 	}
 
-	// Получаем список файлов на сервере
 	files, err := sshClient.ListFiles(remotePath)
 	if err != nil {
-		// Обновляем статус сервера
 		errMsg := err.Error()
 		_ = s.updateServerStatus(ctx, server.ID, "error", &errMsg)
 		return fmt.Errorf("failed to list files: %w", err)
@@ -103,7 +94,6 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 		return nil
 	}
 
-	// Скачиваем каждый файл
 	for _, file := range files {
 		select {
 		case <-ctx.Done():
@@ -114,7 +104,6 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 		remoteFilePath := filepath.Join(remotePath, file)
 		localFilePath := filepath.Join(localPath, file)
 
-		// Создаем задачу
 		task := &domain.SyncTask{
 			ID:         uuid.New(),
 			ServerID:   server.ID,
@@ -133,14 +122,12 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 			continue
 		}
 
-		// Выполняем скачивание с ретраями
 		if err := sshClient.DownloadWithRetry(remoteFilePath, localFilePath); err != nil {
 			logger.Get().Error().
 				Err(err).
 				Str("file", file).
 				Msg("Failed to download file")
 
-			// Обновляем статус задачи
 			errMsg := err.Error()
 			if err := s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusFailed, &errMsg); err != nil {
 				logger.Get().Warn().Err(err).Msg("Failed to update task status")
@@ -148,7 +135,6 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 			continue
 		}
 
-		// Удаляем файл на сервере после успешного скачивания
 		if err := sshClient.DeleteFile(remoteFilePath); err != nil {
 			logger.Get().Warn().
 				Err(err).
@@ -156,7 +142,6 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 				Msg("Failed to delete remote file after download")
 		}
 
-		// Обновляем статус задачи
 		if err := s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusCompleted, nil); err != nil {
 			logger.Get().Warn().Err(err).Msg("Failed to update task status")
 		}
@@ -170,12 +155,10 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 	return nil
 }
 
-// syncUpload отправляет файлы в удаленную tasks/ директорию
 func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, sshClient infrastructure.SSHClientInterface) error {
 	localPath := filepath.Join(s.baseLocalDir, "tasks", server.Name)
 	remotePath := "tasks/"
 
-	// Проверяем существование локальной директории
 	if _, err := os.Stat(localPath); os.IsNotExist(err) {
 		logger.Get().Debug().
 			Str("server", server.Name).
@@ -183,7 +166,6 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 		return nil
 	}
 
-	// Читаем локальные файлы
 	files, err := os.ReadDir(localPath)
 	if err != nil {
 		return fmt.Errorf("failed to read local directory: %w", err)
@@ -196,7 +178,6 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 		return nil
 	}
 
-	// Загружаем каждый файл
 	for _, file := range files {
 		if file.IsDir() {
 			continue
@@ -211,7 +192,6 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 		localFilePath := filepath.Join(localPath, file.Name())
 		remoteFilePath := filepath.Join(remotePath, file.Name())
 
-		// Создаем задачу
 		task := &domain.SyncTask{
 			ID:         uuid.New(),
 			ServerID:   server.ID,
@@ -230,7 +210,6 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 			continue
 		}
 
-		// Выполняем загрузку с ретраями
 		if err := sshClient.UploadWithRetry(localFilePath, remoteFilePath); err != nil {
 			logger.Get().Error().
 				Err(err).
@@ -244,7 +223,6 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 			continue
 		}
 
-		// Удаляем локальный файл после успешной загрузки
 		if err := os.Remove(localFilePath); err != nil {
 			logger.Get().Warn().
 				Err(err).
@@ -252,7 +230,6 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 				Msg("Failed to delete local file after upload")
 		}
 
-		// Обновляем статус задачи
 		if err := s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusCompleted, nil); err != nil {
 			logger.Get().Warn().Err(err).Msg("Failed to update task status")
 		}
@@ -266,7 +243,6 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 	return nil
 }
 
-// updateServerStatus обновляет статус сервера
 func (s *SyncService) updateServerStatus(ctx context.Context, serverID uuid.UUID, status string, errMsg *string) error {
 	serverStatus := &domain.ServerStatus{
 		ID:           uuid.New(),
