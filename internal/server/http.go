@@ -14,6 +14,7 @@ import (
 	myMiddleware "github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/middleware"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
+	"github.com/Meedoeed/ssh-sync-automation/internal/worker"
 )
 
 type HTTPServer struct {
@@ -24,6 +25,7 @@ type HTTPServer struct {
 	serverService *service.ServerService
 	taskService   *service.TaskService
 	syncService   *service.SyncService
+	workerPool    *worker.Pool
 }
 
 func NewHTTP(
@@ -33,6 +35,7 @@ func NewHTTP(
 	serverService *service.ServerService,
 	taskService *service.TaskService,
 	syncService *service.SyncService,
+	workerPool *worker.Pool,
 ) *HTTPServer {
 	e := echo.New()
 	e.HideBanner = true
@@ -53,6 +56,7 @@ func NewHTTP(
 		serverService: serverService,
 		taskService:   taskService,
 		syncService:   syncService,
+		workerPool:    workerPool,
 	}
 }
 
