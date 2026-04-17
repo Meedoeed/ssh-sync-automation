@@ -146,7 +146,6 @@ func (w *Worker) run(ctx context.Context) {
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
 
-	// Выполняем первую синхронизацию
 	w.runSync(ctx)
 
 	for {
