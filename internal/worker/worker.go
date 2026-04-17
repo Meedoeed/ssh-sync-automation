@@ -146,6 +146,7 @@ func (w *Worker) run(ctx context.Context) {
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
 
+	// Выполняем первую синхронизацию
 	w.runSync(ctx)
 
 	for {
@@ -180,13 +181,32 @@ func (w *Worker) runSync(ctx context.Context) {
 	if !w.sshClient.IsConnected() {
 		logger.Get().Warn().
 			Str("server_name", w.serverName).
-			Msg("SSH connection lost")
+			Msg("SSH connection lost, attempting to reconnect...")
 
-		w.updateStatus(ctx, "offline", nil)
+		reconnectCtx := context.Background()
+
+		err := w.syncService.SyncServer(reconnectCtx, w.serverID, w.sshClient)
 
 		w.mu.Lock()
-		w.errorCount++
-		w.lastError = "SSH connection lost"
+		w.lastSync = time.Now()
+		if err != nil {
+			w.errorCount++
+			w.lastError = err.Error()
+			w.updateStatus(ctx, "error", &w.lastError)
+			logger.Get().Error().
+				Err(err).
+				Str("server_name", w.serverName).
+				Dur("duration", time.Since(startTime)).
+				Msg("Sync cycle failed after reconnect attempt")
+		} else {
+			w.syncCount++
+			w.lastError = ""
+			w.updateStatus(ctx, "online", nil)
+			logger.Get().Info().
+				Str("server_name", w.serverName).
+				Dur("duration", time.Since(startTime)).
+				Msg("Sync cycle completed successfully after reconnect")
+		}
 		w.mu.Unlock()
 		return
 	}
