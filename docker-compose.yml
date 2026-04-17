@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: postgres123
       POSTGRES_DB: ssh_sync
     ports:
-      - "5433:5432"  # Пробрасываем 5433 на хосте на 5432 в контейнере
+      - "5433:5432" 
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -24,7 +24,7 @@ services:
     ports:
       - "8081:8081"
     env_file:
-      - .env  # Загружаем переменные из .env файла
+      - .env  
     volumes:
       - ./data:/app/data
     depends_on:
