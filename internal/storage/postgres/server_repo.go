@@ -63,8 +63,8 @@ func (r *ServerRepo) Create(ctx context.Context, server *domain.Server) error {
 		server.Port,
 		server.Username,
 		server.AuthType,
-		encryptedPassword,  
-		encryptedPrivateKey, 
+		encryptedPassword,
+		encryptedPrivateKey,
 		server.IsActive,
 	).Scan(&server.CreatedAt, &server.UpdatedAt)
 
@@ -81,6 +81,8 @@ func (r *ServerRepo) Create(ctx context.Context, server *domain.Server) error {
 
 	return nil
 }
+
+// internal/storage/postgres/server_repo.go
 
 func (r *ServerRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Server, error) {
 	query := `
@@ -115,6 +117,11 @@ func (r *ServerRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Server,
 		return nil, err
 	}
 
+	logger.Get().Debug().
+		Str("server_id", server.ID.String()).
+		Bool("has_encrypted_password", encryptedPassword != nil).
+		Msg("Retrieved server from DB")
+
 	if encryptedPassword != nil && *encryptedPassword != "" {
 		decrypted, err := r.encryptor.Decrypt(*encryptedPassword)
 		if err != nil {
@@ -122,6 +129,14 @@ func (r *ServerRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Server,
 			return nil, err
 		}
 		server.Password = &decrypted
+		logger.Get().Debug().
+			Str("server_id", server.ID.String()).
+			Int("password_length", len(decrypted)).
+			Msg("Password decrypted successfully")
+	} else {
+		logger.Get().Warn().
+			Str("server_id", server.ID.String()).
+			Msg("No encrypted password found")
 	}
 
 	if encryptedPrivateKey != nil && *encryptedPrivateKey != "" {
@@ -239,7 +254,7 @@ func (r *ServerRepo) Update(ctx context.Context, server *domain.Server) error {
 
 func (r *ServerRepo) List(ctx context.Context, activeOnly bool) ([]*domain.Server, error) {
 	query := `
-        SELECT id, name, host, port, username, auth_type, 
+        SELECT id, name, host, port, username, auth_type, password, private_key,
                created_at, updated_at, last_seen, is_active
         FROM servers
     `
@@ -257,6 +272,8 @@ func (r *ServerRepo) List(ctx context.Context, activeOnly bool) ([]*domain.Serve
 	var servers []*domain.Server
 	for rows.Next() {
 		var server domain.Server
+		var encryptedPassword, encryptedPrivateKey *string
+
 		err := rows.Scan(
 			&server.ID,
 			&server.Name,
@@ -264,6 +281,8 @@ func (r *ServerRepo) List(ctx context.Context, activeOnly bool) ([]*domain.Serve
 			&server.Port,
 			&server.Username,
 			&server.AuthType,
+			&encryptedPassword,
+			&encryptedPrivateKey,
 			&server.CreatedAt,
 			&server.UpdatedAt,
 			&server.LastSeen,
@@ -272,6 +291,32 @@ func (r *ServerRepo) List(ctx context.Context, activeOnly bool) ([]*domain.Serve
 		if err != nil {
 			return nil, err
 		}
+
+		if encryptedPassword != nil && *encryptedPassword != "" {
+			decrypted, err := r.encryptor.Decrypt(*encryptedPassword)
+			if err != nil {
+				logger.Get().Error().
+					Err(err).
+					Str("server_id", server.ID.String()).
+					Msg("Failed to decrypt password")
+				return nil, err
+			}
+			server.Password = &decrypted
+		}
+
+		// Дешифруем приватный ключ
+		if encryptedPrivateKey != nil && *encryptedPrivateKey != "" {
+			decrypted, err := r.encryptor.Decrypt(*encryptedPrivateKey)
+			if err != nil {
+				logger.Get().Error().
+					Err(err).
+					Str("server_id", server.ID.String()).
+					Msg("Failed to decrypt private key")
+				return nil, err
+			}
+			server.PrivateKey = &decrypted
+		}
+
 		servers = append(servers, &server)
 	}
 

@@ -219,16 +219,29 @@ func (r *TaskRepo) Update(ctx context.Context, task *domain.SyncTask) error {
 
 func (r *TaskRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.SyncStatus, errMsg *string) error {
 	query := `
-		UPDATE sync_tasks
-		SET status = $2, error_message = $3,
-		    completed_at = CASE WHEN $2 IN ('completed', 'failed', 'cancelled') THEN NOW() ELSE completed_at END
-		WHERE id = $1
-	`
+        UPDATE sync_tasks
+        SET status = $2,
+            error_message = $3,
+            updated_at = NOW()
+        WHERE id = $1
+    `
 
-	_, err := r.db.Exec(ctx, query, id, status, errMsg)
+	_, err := r.db.Exec(ctx, query, id, string(status), errMsg)
+	if err != nil {
+		return err
+	}
+
+	if status == domain.StatusCompleted || status == domain.StatusFailed || status == domain.StatusCancelled {
+		queryComplete := `
+            UPDATE sync_tasks
+            SET completed_at = NOW()
+            WHERE id = $1 AND completed_at IS NULL
+        `
+		_, err = r.db.Exec(ctx, queryComplete, id)
+	}
+
 	return err
 }
-
 func (r *TaskRepo) UpdateProgress(ctx context.Context, id uuid.UUID, bytesTransferred int64) error {
 	query := `
 		UPDATE sync_tasks
