@@ -1,4 +1,3 @@
-// cmd/server/main.go
 package main
 
 import (
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/config"
+	"github.com/Meedoeed/ssh-sync-automation/internal/handler"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/encryption"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	"github.com/Meedoeed/ssh-sync-automation/internal/server"
@@ -54,19 +54,28 @@ func main() {
 	taskService := service.NewTaskService(taskRepo)
 	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")
 
-	workerPool := worker.NewPool(&worker.PoolConfig{
+	poolConfig := &worker.PoolConfig{
 		Interval:    cfg.Sync.Interval,
 		SyncCfg:     &cfg.Sync,
 		ServerRepo:  serverRepo,
 		StatusRepo:  statusRepo,
 		SyncService: syncService,
-	})
+	}
+	workerPool := worker.NewPool(poolConfig)
 
 	if err := workerPool.Start(ctx); err != nil {
 		logger.Get().Fatal().Err(err).Msg("Failed to start worker pool")
 	}
+	defer workerPool.StopAll()
 
-	httpServer := server.NewHTTP(cfg, db, encryptor, serverService, taskService, syncService, workerPool)
+	healthHandler := handler.NewHealthHandler(db)
+	serverHandler := handler.NewServerHandler(serverService, workerPool)
+
+	httpServer := server.NewHTTP(cfg, db, encryptor, serverService, taskService, syncService)
+
+	httpServer.SetValidator(handler.NewCustomValidator())
+
+	handler.RegisterRoutes(httpServer.GetEcho(), healthHandler, serverHandler)
 
 	go func() {
 		if err := httpServer.Start(); err != nil {
@@ -78,9 +87,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	workerPool.StopAll()
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
