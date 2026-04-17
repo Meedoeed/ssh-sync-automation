@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure"
@@ -48,6 +49,34 @@ func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshCli
 		Str("server_name", server.Name).
 		Msg("Starting sync for server")
 
+	if !sshClient.IsConnected() {
+		logger.Get().Warn().
+			Str("server_name", server.Name).
+			Msg("SSH connection lost, attempting to reconnect...")
+
+		if err := sshClient.Close(); err != nil {
+			logger.Get().Warn().
+				Err(err).
+				Str("server_name", server.Name).
+				Msg("Error closing old connection")
+		}
+
+		if err := sshClient.Connect(server); err != nil {
+			logger.Get().Error().
+				Err(err).
+				Str("server_name", server.Name).
+				Msg("Failed to reconnect")
+
+			errMsg := err.Error()
+			s.updateServerStatus(ctx, server.ID, "error", &errMsg)
+			return fmt.Errorf("failed to reconnect: %w", err)
+		}
+
+		logger.Get().Info().
+			Str("server_name", server.Name).
+			Msg("SSH reconnected successfully")
+	}
+
 	if err := s.syncDownload(ctx, server, sshClient); err != nil {
 		logger.Get().Error().
 			Err(err).
@@ -62,6 +91,8 @@ func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshCli
 			Msg("Upload sync failed")
 		return err
 	}
+
+	s.updateServerStatus(ctx, server.ID, "online", nil)
 
 	logger.Get().Info().
 		Str("server_id", serverID.String()).
@@ -247,6 +278,7 @@ func (s *SyncService) updateServerStatus(ctx context.Context, serverID uuid.UUID
 		ID:           uuid.New(),
 		ServerID:     serverID,
 		Status:       status,
+		LastChecked:  time.Now(),
 		ErrorMessage: errMsg,
 	}
 
