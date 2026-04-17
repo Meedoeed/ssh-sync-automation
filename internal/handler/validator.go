@@ -1,4 +1,3 @@
-// internal/handler/validator.go
 package handler
 
 import (

@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: ssh_sync
+    ports:
+      - "5433:5432"  # Пробрасываем 5433 на хосте на 5432 в контейнере
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ssh-sync-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ssh-sync-service:
+    build: .
+    ports:
+      - "8081:8081"
+    env_file:
+      - .env  # Загружаем переменные из .env файла
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ssh-sync-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  ssh-sync-network:
+    driver: bridge
