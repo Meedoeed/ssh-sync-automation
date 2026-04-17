@@ -39,6 +39,14 @@ type SSHClientInterface interface {
 }
 
 func NewSSHClient(cfg *config.SyncCfg) *SSHClient {
+	if cfg == nil {
+		cfg = &config.SyncCfg{
+			SSHConTimeout: 10 * time.Second,
+			SSHKeepAlive:  30 * time.Second,
+			RetryMaxAtmpt: 3,
+			RetryDelay:    5 * time.Second,
+		}
+	}
 	return &SSHClient{
 		config: cfg,
 	}
@@ -52,24 +60,39 @@ func (c *SSHClient) Connect(server *domain.Server) error {
 		return fmt.Errorf("already connected")
 	}
 
+	if c.config == nil {
+		return fmt.Errorf("ssh client config is nil")
+	}
+
 	var methods []ssh.AuthMethod
 	switch server.AuthType {
 	case "password":
+		if server.Password == nil {
+			return fmt.Errorf("password is nil for password auth")
+		}
 		methods = []ssh.AuthMethod{ssh.Password(*server.Password)}
+		logger.Get().Debug().
+			Str("username", server.Username).
+			Msg("Using password authentication")
 	case "key":
+		if server.PrivateKey == nil {
+			return fmt.Errorf("private key is nil for key auth")
+		}
 		signer, err := ssh.ParsePrivateKey([]byte(*server.PrivateKey))
 		if err != nil {
 			return fmt.Errorf("failed to parse private key: %w", err)
 		}
 		methods = []ssh.AuthMethod{ssh.PublicKeys(signer)}
+		logger.Get().Debug().
+			Str("username", server.Username).
+			Msg("Using key authentication")
 	default:
 		return fmt.Errorf("unsupported auth type: %s", server.AuthType)
 	}
 
 	sshConfig := &ssh.ClientConfig{
-		User: server.Username,
-		Auth: methods,
-		// TODO: Добавить проверку known_hosts
+		User:            server.Username,
+		Auth:            methods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         c.config.SSHConTimeout,
 	}
@@ -96,7 +119,6 @@ func (c *SSHClient) Connect(server *domain.Server) error {
 	c.sftpClient = sftpClient
 
 	c.startKeepAlive(server.Name)
-
 	c.connected = true
 
 	logger.Get().Info().
