@@ -1,4 +1,3 @@
-// internal/service/server_service.go
 package service
 
 import (
@@ -28,7 +27,6 @@ func NewServerService(
 }
 
 func (s *ServerService) CreateServer(ctx context.Context, server *domain.Server) error {
-	// Валидация
 	if err := s.validateServer(server); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
@@ -116,7 +114,6 @@ func (s *ServerService) DeleteServer(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("server not found")
 	}
 
-	// Удаление
 	if err := s.serverRepo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete server: %w", err)
 	}

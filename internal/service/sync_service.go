@@ -284,3 +284,7 @@ func (s *SyncService) updateServerStatus(ctx context.Context, serverID uuid.UUID
 
 	return s.statusRepo.Create(ctx, serverStatus)
 }
+
+func (s *SyncService) GetServer(ctx context.Context, serverID uuid.UUID) (*domain.Server, error) {
+	return s.serverRepo.GetByID(ctx, serverID)
+}
