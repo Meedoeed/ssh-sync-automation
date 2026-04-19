@@ -22,7 +22,7 @@ func RegisterRoutes(
 	servers.GET("", serverHandler.ListServers)
 	servers.GET("/:id", serverHandler.GetServer)
 	servers.DELETE("/:id", serverHandler.DeleteServer)
-	//TODO update
+	servers.PUT("/:id", serverHandler.UpdateServer)
 
 	v1.GET("/workers/stats", serverHandler.GetWorkerStats)
 }

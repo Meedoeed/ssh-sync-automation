@@ -190,6 +190,8 @@ func (h *ServerHandler) CreateServer(c echo.Context) error {
 	return c.JSON(http.StatusCreated, response)
 }
 
+// internal/handler/server_handler.go
+
 func (h *ServerHandler) GetWorkerStats(c echo.Context) error {
 	if h.workerPool == nil {
 		return c.JSON(http.StatusServiceUnavailable, map[string]string{
@@ -198,6 +200,22 @@ func (h *ServerHandler) GetWorkerStats(c echo.Context) error {
 	}
 
 	stats := h.workerPool.GetStats()
+
+	if workers, ok := stats["workers"].([]map[string]interface{}); ok {
+		for i, workerStats := range workers {
+			if serverIDStr, ok := workerStats["server_id"].(string); ok {
+				serverID, err := uuid.Parse(serverIDStr)
+				if err == nil {
+					server, err := h.serverService.GetServer(c.Request().Context(), serverID)
+					if err == nil && server != nil && server.Name != workerStats["server_name"] {
+						workers[i]["server_name"] = server.Name
+					}
+				}
+			}
+		}
+		stats["workers"] = workers
+	}
+
 	return c.JSON(http.StatusOK, stats)
 }
 
@@ -283,23 +301,22 @@ func (h *ServerHandler) DeleteServer(c echo.Context) error {
 
 	server, err := h.serverService.GetServer(ctx, serverID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "server not found",
-		})
-	}
-	if server == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "server not found",
-		})
+		logger.Get().Warn().
+			Err(err).
+			Str("server_id", id).
+			Msg("Server not found for deletion")
+	} else if server == nil {
+		logger.Get().Warn().
+			Str("server_id", id).
+			Msg("Server is nil")
 	}
 
 	if h.workerPool != nil {
 		if err := h.workerPool.RemoveWorker(serverID); err != nil {
-			logger.Get().Warn().
+			logger.Get().Debug().
 				Err(err).
 				Str("server_id", id).
-				Str("server_name", server.Name).
-				Msg("Failed to remove worker (worker may not exist)")
+				Msg("Worker removal skipped (worker may not exist)")
 		}
 	}
 
@@ -309,14 +326,205 @@ func (h *ServerHandler) DeleteServer(c echo.Context) error {
 		})
 	}
 
+	serverName := ""
+	if server != nil {
+		serverName = server.Name
+	}
+
 	logger.Get().Info().
 		Str("server_id", id).
-		Str("server_name", server.Name).
+		Str("server_name", serverName).
 		Msg("Server deleted successfully")
 
 	return c.JSON(http.StatusOK, map[string]string{
 		"status":      "deleted",
 		"server_id":   id,
-		"server_name": server.Name,
+		"server_name": serverName,
 	})
+}
+
+type UpdateServerRequest struct {
+	Name       string  `json:"name,omitempty"`
+	Host       string  `json:"host,omitempty"`
+	Port       int     `json:"port,omitempty"`
+	Username   string  `json:"username,omitempty"`
+	AuthType   string  `json:"auth_type,omitempty"`
+	Password   *string `json:"password,omitempty"`
+	PrivateKey *string `json:"private_key,omitempty"`
+	IsActive   *bool   `json:"is_active,omitempty"`
+}
+
+func (h *ServerHandler) UpdateServer(c echo.Context) error {
+	id := c.Param("id")
+	serverID, err := uuid.Parse(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid server id",
+		})
+	}
+
+	ctx := c.Request().Context()
+
+	existingServer, err := h.serverService.GetServer(ctx, serverID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "server not found",
+		})
+	}
+	if existingServer == nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "server not found",
+		})
+	}
+
+	var req UpdateServerRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid request body: " + err.Error(),
+		})
+	}
+
+	oldName := existingServer.Name
+	wasActive := existingServer.IsActive
+
+	if req.Name != "" {
+		existingServer.Name = req.Name
+	}
+	if req.Host != "" {
+		existingServer.Host = req.Host
+	}
+	if req.Port != 0 && req.Port >= 1 && req.Port <= 65535 {
+		existingServer.Port = req.Port
+	}
+	if req.Username != "" {
+		existingServer.Username = req.Username
+	}
+	if req.AuthType != "" {
+		if req.AuthType != "password" && req.AuthType != "key" {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "auth_type must be 'password' or 'key'",
+			})
+		}
+		existingServer.AuthType = req.AuthType
+	}
+	if req.Password != nil {
+		existingServer.Password = req.Password
+	}
+	if req.PrivateKey != nil {
+		existingServer.PrivateKey = req.PrivateKey
+	}
+	if req.IsActive != nil {
+		existingServer.IsActive = *req.IsActive
+	}
+
+	if existingServer.AuthType == "password" && (existingServer.Password == nil || strings.TrimSpace(*existingServer.Password) == "") {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "password is required for password authentication",
+		})
+	}
+	if existingServer.AuthType == "key" && (existingServer.PrivateKey == nil || strings.TrimSpace(*existingServer.PrivateKey) == "") {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "private_key is required for key authentication",
+		})
+	}
+
+	if err := h.serverService.UpdateServer(ctx, existingServer); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to update server: " + err.Error(),
+		})
+	}
+
+	needsRestart := req.Name != "" || req.Host != "" || req.Port != 0 || req.Username != "" ||
+		req.AuthType != "" || req.Password != nil || req.PrivateKey != nil
+
+	if existingServer.IsActive && needsRestart && h.workerPool != nil {
+		logger.Get().Info().
+			Str("server_id", serverID.String()).
+			Str("old_name", oldName).
+			Str("new_name", existingServer.Name).
+			Msg("Server configuration changed, restarting worker")
+
+		go func() {
+			if err := h.workerPool.RemoveWorker(serverID); err != nil {
+				logger.Get().Warn().
+					Err(err).
+					Str("server_id", serverID.String()).
+					Msg("Failed to remove old worker")
+			}
+
+			freshServer, err := h.serverService.GetServer(context.Background(), serverID)
+			if err != nil {
+				logger.Get().Error().
+					Err(err).
+					Str("server_id", serverID.String()).
+					Msg("Failed to get fresh server data after update")
+				return
+			}
+
+			if err := h.workerPool.AddWorker(context.Background(), freshServer); err != nil {
+				logger.Get().Error().
+					Err(err).
+					Str("server_id", serverID.String()).
+					Msg("Failed to add updated worker")
+			} else {
+				logger.Get().Info().
+					Str("server_id", serverID.String()).
+					Str("server_name", freshServer.Name).
+					Msg("Worker restarted successfully after update")
+			}
+		}()
+	} else if req.IsActive != nil && *req.IsActive != wasActive {
+		if *req.IsActive {
+			logger.Get().Info().
+				Str("server_name", existingServer.Name).
+				Msg("Server activated, adding worker")
+
+			if h.workerPool != nil {
+				go func() {
+					freshServer, err := h.serverService.GetServer(context.Background(), serverID)
+					if err == nil && freshServer != nil {
+						if err := h.workerPool.AddWorker(context.Background(), freshServer); err != nil {
+							logger.Get().Error().
+								Err(err).
+								Str("server_name", existingServer.Name).
+								Msg("Failed to add worker after activation")
+						}
+					}
+				}()
+			}
+		} else {
+			logger.Get().Info().
+				Str("server_name", existingServer.Name).
+				Msg("Server deactivated, removing worker")
+
+			if h.workerPool != nil {
+				go func() {
+					if err := h.workerPool.RemoveWorker(serverID); err != nil {
+						logger.Get().Warn().
+							Err(err).
+							Str("server_name", existingServer.Name).
+							Msg("Failed to remove worker after deactivation")
+					}
+				}()
+			}
+		}
+	}
+
+	response := ServerResponse{
+		ID:        existingServer.ID.String(),
+		Name:      existingServer.Name,
+		Host:      existingServer.Host,
+		Port:      existingServer.Port,
+		Username:  existingServer.Username,
+		AuthType:  existingServer.AuthType,
+		IsActive:  existingServer.IsActive,
+		CreatedAt: existingServer.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt: existingServer.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+	if existingServer.LastSeen != nil {
+		lastSeen := existingServer.LastSeen.Format("2006-01-02T15:04:05Z07:00")
+		response.LastSeen = &lastSeen
+	}
+
+	return c.JSON(http.StatusOK, response)
 }
