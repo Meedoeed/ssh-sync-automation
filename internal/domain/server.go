@@ -24,7 +24,7 @@ type Server struct {
 type ServerStatus struct {
 	ID           uuid.UUID
 	ServerID     uuid.UUID
-	Status       string //  TODO "online" или "offline" или "syncing" или "error"
+	Status       string
 	LastChecked  time.Time
 	ErrorMessage *string
 	CreatedAt    time.Time
