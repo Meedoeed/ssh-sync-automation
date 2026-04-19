@@ -100,16 +100,48 @@ func (w *Worker) Stop() error {
 	}
 
 	w.state = StateStopped
+
 	if w.cancelFunc != nil {
 		w.cancelFunc()
 	}
-	w.wg.Wait()
 
-	if err := w.sshClient.Close(); err != nil {
-		logger.Get().Warn().
-			Err(err).
+	done := make(chan struct{})
+	go func() {
+		w.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.Get().Debug().
 			Str("server_name", w.serverName).
-			Msg("Error closing SSH connection")
+			Msg("Worker goroutine stopped gracefully")
+	case <-time.After(5 * time.Second):
+		logger.Get().Warn().
+			Str("server_name", w.serverName).
+			Msg("Worker stop timeout, forcing shutdown")
+	}
+
+	closeDone := make(chan struct{})
+	go func() {
+		if err := w.sshClient.Close(); err != nil {
+			logger.Get().Warn().
+				Err(err).
+				Str("server_name", w.serverName).
+				Msg("Error closing SSH connection")
+		}
+		close(closeDone)
+	}()
+
+	select {
+	case <-closeDone:
+		logger.Get().Debug().
+			Str("server_name", w.serverName).
+			Msg("SSH connection closed")
+	case <-time.After(3 * time.Second):
+		logger.Get().Warn().
+			Str("server_name", w.serverName).
+			Msg("SSH close timeout, continuing")
 	}
 
 	logger.Get().Info().
@@ -151,6 +183,9 @@ func (w *Worker) run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			logger.Get().Debug().
+				Str("server_name", w.serverName).
+				Msg("Worker context cancelled, stopping")
 			w.updateStatus(ctx, "offline", nil)
 			return
 
@@ -177,35 +212,15 @@ func (w *Worker) runSync(ctx context.Context) {
 
 	w.updateStatus(ctx, "syncing", nil)
 
-	if !w.sshClient.IsConnected() {
+	if !w.ensureConnection(ctx) {
 		logger.Get().Warn().
 			Str("server_name", w.serverName).
-			Msg("SSH connection lost, attempting to reconnect...")
-
-		reconnectCtx := context.Background()
-
-		err := w.syncService.SyncServer(reconnectCtx, w.serverID, w.sshClient)
+			Msg("Cannot establish SSH connection, will retry next cycle")
 
 		w.mu.Lock()
+		w.errorCount++
+		w.lastError = "SSH connection failed"
 		w.lastSync = time.Now()
-		if err != nil {
-			w.errorCount++
-			w.lastError = err.Error()
-			w.updateStatus(ctx, "error", &w.lastError)
-			logger.Get().Error().
-				Err(err).
-				Str("server_name", w.serverName).
-				Dur("duration", time.Since(startTime)).
-				Msg("Sync cycle failed after reconnect attempt")
-		} else {
-			w.syncCount++
-			w.lastError = ""
-			w.updateStatus(ctx, "online", nil)
-			logger.Get().Info().
-				Str("server_name", w.serverName).
-				Dur("duration", time.Since(startTime)).
-				Msg("Sync cycle completed successfully after reconnect")
-		}
 		w.mu.Unlock()
 		return
 	}
@@ -235,6 +250,70 @@ func (w *Worker) runSync(ctx context.Context) {
 	w.mu.Unlock()
 }
 
+func (w *Worker) ensureConnection(ctx context.Context) bool {
+	if w.sshClient.IsConnected() {
+		return true
+	}
+
+	logger.Get().Warn().
+		Str("server_name", w.serverName).
+		Msg("SSH connection lost, attempting to reconnect...")
+
+	maxAttempts := 5
+	baseDelay := 2 * time.Second
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
+		server, err := w.syncService.GetServer(ctx, w.serverID)
+		if err != nil {
+			logger.Get().Warn().
+				Err(err).
+				Str("server_name", w.serverName).
+				Msg("Failed to get server info from DB")
+			continue
+		}
+
+		w.sshClient.Close()
+
+		if err := w.sshClient.Connect(server); err != nil {
+			delay := baseDelay * time.Duration(attempt*attempt)
+			logger.Get().Warn().
+				Err(err).
+				Str("server_name", w.serverName).
+				Int("attempt", attempt).
+				Int("max_attempts", maxAttempts).
+				Dur("next_retry", delay).
+				Msg("Reconnection attempt failed")
+
+			if attempt < maxAttempts {
+				select {
+				case <-ctx.Done():
+					return false
+				case <-time.After(delay):
+				}
+			}
+			continue
+		}
+
+		logger.Get().Info().
+			Str("server_name", w.serverName).
+			Int("attempts", attempt).
+			Msg("Successfully reconnected to server")
+		return true
+	}
+
+	logger.Get().Error().
+		Str("server_name", w.serverName).
+		Int("max_attempts", maxAttempts).
+		Msg("Failed to reconnect after all attempts")
+	return false
+}
+
 func (w *Worker) updateStatus(ctx context.Context, status string, errMsg *string) {
 	serverStatus := &domain.ServerStatus{
 		ID:           uuid.New(),
@@ -244,7 +323,10 @@ func (w *Worker) updateStatus(ctx context.Context, status string, errMsg *string
 		ErrorMessage: errMsg,
 	}
 
-	if err := w.statusRepo.Create(ctx, serverStatus); err != nil {
+	updateCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := w.statusRepo.Create(updateCtx, serverStatus); err != nil {
 		logger.Get().Warn().
 			Err(err).
 			Str("server_name", w.serverName).

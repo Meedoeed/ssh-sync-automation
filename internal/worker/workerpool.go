@@ -23,6 +23,8 @@ type Pool struct {
 	syncService *service.SyncService
 	syncCfg     *config.SyncCfg
 	interval    time.Duration
+	cancelFunc  context.CancelFunc
+	wg          sync.WaitGroup
 }
 
 type PoolConfig struct {
@@ -69,7 +71,62 @@ func (p *Pool) Start(ctx context.Context) error {
 		Int("worker_count", len(p.workers)).
 		Msg("Worker pool started")
 
+	syncCtx, cancel := context.WithCancel(ctx)
+	p.cancelFunc = cancel
+	p.wg.Add(1)
+	go p.syncWorkersLoop(syncCtx)
+
 	return nil
+}
+
+func (p *Pool) syncWorkersLoop(ctx context.Context) {
+	defer p.wg.Done()
+
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Get().Debug().Msg("Worker sync loop stopped")
+			return
+		case <-ticker.C:
+			p.syncMissingWorkers(ctx)
+		}
+	}
+}
+
+func (p *Pool) syncMissingWorkers(ctx context.Context) {
+	servers, err := p.serverRepo.List(ctx, true)
+	if err != nil {
+		logger.Get().Warn().
+			Err(err).
+			Msg("Failed to list servers for worker sync")
+		return
+	}
+
+	p.mu.RLock()
+	existingWorkers := make(map[uuid.UUID]bool)
+	for id := range p.workers {
+		existingWorkers[id] = true
+	}
+	p.mu.RUnlock()
+
+	for _, server := range servers {
+		if !existingWorkers[server.ID] {
+			logger.Get().Info().
+				Str("server_name", server.Name).
+				Str("server_id", server.ID.String()).
+				Msg("Found server without worker, creating...")
+
+			if err := p.AddWorker(ctx, server); err != nil {
+				logger.Get().Error().
+					Err(err).
+					Str("server_name", server.Name).
+					Msg("Failed to create missing worker")
+			}
+		}
+	}
 }
 
 func (p *Pool) AddWorker(ctx context.Context, server *domain.Server) error {
@@ -87,7 +144,17 @@ func (p *Pool) AddWorker(ctx context.Context, server *domain.Server) error {
 		RetryDelay:    p.syncCfg.RetryDelay,
 	})
 
+	logger.Get().Info().
+		Str("server", server.Name).
+		Str("host", server.Host).
+		Int("port", server.Port).
+		Msg("Attempting to connect to server")
+
 	if err := sshClient.Connect(server); err != nil {
+		logger.Get().Error().
+			Err(err).
+			Str("server_name", server.Name).
+			Msg("Failed to connect to server, worker will not be created")
 		return fmt.Errorf("failed to connect to server: %w", err)
 	}
 
@@ -114,17 +181,40 @@ func (p *Pool) AddWorker(ctx context.Context, server *domain.Server) error {
 	return nil
 }
 
+// internal/worker/workerpool.go
+
 func (p *Pool) RemoveWorker(serverID uuid.UUID) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	worker, exists := p.workers[serverID]
 	if !exists {
-		return fmt.Errorf("worker for server %s not found", serverID)
+		logger.Get().Debug().
+			Str("server_id", serverID.String()).
+			Msg("Worker not found, nothing to remove")
+		return nil
 	}
 
-	if err := worker.Stop(); err != nil {
-		return fmt.Errorf("failed to stop worker: %w", err)
+	stopDone := make(chan struct{})
+	go func() {
+		if err := worker.Stop(); err != nil {
+			logger.Get().Warn().
+				Err(err).
+				Str("server_id", serverID.String()).
+				Msg("Error stopping worker")
+		}
+		close(stopDone)
+	}()
+
+	select {
+	case <-stopDone:
+		logger.Get().Debug().
+			Str("server_id", serverID.String()).
+			Msg("Worker stopped successfully")
+	case <-time.After(10 * time.Second):
+		logger.Get().Warn().
+			Str("server_id", serverID.String()).
+			Msg("Worker stop timeout, forcing removal")
 	}
 
 	delete(p.workers, serverID)
@@ -162,6 +252,13 @@ func (p *Pool) ListWorkers() []*Worker {
 }
 
 func (p *Pool) StopAll() {
+	logger.Get().Info().Msg("Stopping worker pool...")
+
+	if p.cancelFunc != nil {
+		p.cancelFunc()
+	}
+	p.wg.Wait()
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -175,7 +272,6 @@ func (p *Pool) StopAll() {
 	}
 
 	p.workers = make(map[uuid.UUID]*Worker)
-
 	logger.Get().Info().Msg("All workers stopped")
 }
 
