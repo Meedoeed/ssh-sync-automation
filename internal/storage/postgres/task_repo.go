@@ -286,3 +286,49 @@ func (r *TaskRepo) DeleteCompletedOlderThan(ctx context.Context, olderThan time.
 
 	return result.RowsAffected(), nil
 }
+
+func (r *TaskRepo) ListAll(ctx context.Context, limit int) ([]*domain.SyncTask, error) {
+	query := `
+		SELECT id, server_id, direction, file_name, remote_path, local_path,
+		       file_size, bytes_transferred, status, attempt_count, max_attempts,
+		       error_message, started_at, completed_at, created_at, updated_at
+		FROM sync_tasks
+		ORDER BY created_at DESC
+		LIMIT $1
+	`
+
+	rows, err := r.db.Query(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*domain.SyncTask
+	for rows.Next() {
+		var task domain.SyncTask
+		err := rows.Scan(
+			&task.ID,
+			&task.ServerID,
+			&task.Direction,
+			&task.FileName,
+			&task.RemotePath,
+			&task.LocalPath,
+			&task.FileSize,
+			&task.BytesTransferred,
+			&task.Status,
+			&task.AttemptCount,
+			&task.MaxAttempts,
+			&task.ErrorMessage,
+			&task.StartedAt,
+			&task.CompletedAt,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, &task)
+	}
+
+	return tasks, nil
+}

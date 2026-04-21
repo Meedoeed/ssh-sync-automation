@@ -250,3 +250,16 @@ func (s *TaskService) validateTask(task *domain.SyncTask) error {
 	}
 	return nil
 }
+
+func (s *TaskService) GetAllTasks(ctx context.Context, limit int) ([]*domain.SyncTask, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+
+	tasks, err := s.taskRepo.ListAll(ctx, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all tasks: %w", err)
+	}
+
+	return tasks, nil
+}
