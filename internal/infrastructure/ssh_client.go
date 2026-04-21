@@ -33,9 +33,12 @@ type SSHClientInterface interface {
 	ListFiles(remotePath string) ([]string, error)
 	DownloadResumable(remotePath, localPath string) error
 	DownloadWithRetry(remotePath, localPath string) error
+	DownloadWithRetryProgress(remotePath, localPath string, progressCallback func(downloaded, total int64)) error
 	UploadResumable(localPath, remotePath string) error
 	UploadWithRetry(localPath, remotePath string) error
+	UploadWithRetryProgress(localPath, remotePath string, progressCallback func(uploaded, total int64)) error // добавить
 	DeleteFile(remotePath string) error
+	GetFileSize(remotePath string) (int64, error)
 }
 
 func NewSSHClient(cfg *config.SyncCfg) *SSHClient {
@@ -521,6 +524,10 @@ func (c *SSHClient) DeleteFile(remotePath string) error {
 }
 
 func (c *SSHClient) DownloadWithRetry(remotePath, localPath string) error {
+	return c.DownloadWithRetryProgress(remotePath, localPath, nil)
+}
+
+func (c *SSHClient) DownloadWithRetryProgress(remotePath, localPath string, progressCallback func(downloaded, total int64)) error {
 	var lastErr error
 	for attempt := 0; attempt < c.config.RetryMaxAtmpt; attempt++ {
 		if attempt > 0 {
@@ -532,7 +539,7 @@ func (c *SSHClient) DownloadWithRetry(remotePath, localPath string) error {
 			time.Sleep(c.config.RetryDelay)
 		}
 
-		err := c.DownloadResumable(remotePath, localPath)
+		err := c.DownloadWithProgress(remotePath, localPath, progressCallback)
 		if err == nil {
 			return nil
 		}
@@ -542,6 +549,226 @@ func (c *SSHClient) DownloadWithRetry(remotePath, localPath string) error {
 }
 
 func (c *SSHClient) UploadWithRetry(localPath, remotePath string) error {
+	return c.UploadWithRetryProgress(localPath, remotePath, nil)
+}
+
+func (c *SSHClient) GetFileSize(remotePath string) (int64, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.sftpClient == nil {
+		return 0, fmt.Errorf("not connected")
+	}
+
+	info, err := c.sftpClient.Stat(remotePath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to stat remote file: %w", err)
+	}
+
+	return info.Size(), nil
+}
+
+func (c *SSHClient) DownloadWithProgress(remotePath, localPath string, progressCallback func(downloaded, total int64)) error {
+	if c.sftpClient == nil {
+		return fmt.Errorf("not connected")
+	}
+
+	partPath := localPath + ".part"
+
+	remoteFile, err := c.sftpClient.Open(remotePath)
+	if err != nil {
+		return fmt.Errorf("failed to open remote file: %w", err)
+	}
+	defer remoteFile.Close()
+
+	remoteInfo, err := remoteFile.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat remote file: %w", err)
+	}
+	totalSize := remoteInfo.Size()
+
+	var offset int64 = 0
+	if info, err := os.Stat(partPath); err == nil {
+		offset = info.Size()
+	}
+
+	if offset >= totalSize {
+		if offset > totalSize {
+			logger.Get().Warn().
+				Str("file", remotePath).
+				Int64("part_size", offset).
+				Int64("remote_size", totalSize).
+				Msg("Part file larger than remote, restarting download")
+			offset = 0
+		} else {
+			return os.Rename(partPath, localPath)
+		}
+	}
+
+	var localFile *os.File
+	if offset > 0 {
+		localFile, err = os.OpenFile(partPath, os.O_APPEND|os.O_WRONLY, 0644)
+	} else {
+		localFile, err = os.Create(partPath)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to create local file: %w", err)
+	}
+	defer localFile.Close()
+
+	if offset > 0 {
+		_, err = remoteFile.Seek(offset, io.SeekStart)
+		if err != nil {
+			return fmt.Errorf("failed to seek remote file: %w", err)
+		}
+	}
+
+	buffer := make([]byte, 32*1024)
+	downloaded := offset
+
+	if progressCallback != nil {
+		progressCallback(downloaded, totalSize)
+	}
+
+	for {
+		n, err := remoteFile.Read(buffer)
+		if n > 0 {
+			_, writeErr := localFile.Write(buffer[:n])
+			if writeErr != nil {
+				return fmt.Errorf("failed to write to local file: %w", writeErr)
+			}
+			downloaded += int64(n)
+
+			if progressCallback != nil && n > 0 && downloaded%(1024*1024) < int64(n) {
+				progressCallback(downloaded, totalSize)
+			}
+		}
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read remote file: %w", err)
+		}
+	}
+
+	if err := os.Rename(partPath, localPath); err != nil {
+		return fmt.Errorf("failed to rename part file: %w", err)
+	}
+
+	if progressCallback != nil {
+		progressCallback(totalSize, totalSize)
+	}
+
+	return nil
+}
+
+func (c *SSHClient) UploadWithProgress(localPath, remotePath string, progressCallback func(uploaded, total int64)) error {
+	if c.sftpClient == nil {
+		return fmt.Errorf("not connected")
+	}
+
+	remotePartPath := remotePath + ".part"
+
+	localFile, err := os.Open(localPath)
+	if err != nil {
+		return fmt.Errorf("failed to open local file: %w", err)
+	}
+	defer localFile.Close()
+
+	localInfo, err := localFile.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat local file: %w", err)
+	}
+	totalSize := localInfo.Size()
+
+	var offset int64 = 0
+	if info, err := c.sftpClient.Stat(remotePartPath); err == nil {
+		offset = info.Size()
+		logger.Get().Debug().
+			Str("file", localPath).
+			Int64("offset", offset).
+			Msg("Found existing part file on server")
+	}
+
+	if offset >= totalSize {
+		if offset > totalSize {
+			logger.Get().Warn().
+				Str("file", localPath).
+				Int64("part_size", offset).
+				Int64("local_size", totalSize).
+				Msg("Part file larger than local, restarting upload")
+			offset = 0
+		} else {
+			return c.sftpClient.Rename(remotePartPath, remotePath)
+		}
+	}
+
+	var remoteFile *sftp.File
+	if offset > 0 {
+		remoteFile, err = c.sftpClient.OpenFile(remotePartPath, os.O_APPEND|os.O_WRONLY)
+	} else {
+		remoteFile, err = c.sftpClient.Create(remotePartPath)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to open remote part file: %w", err)
+	}
+	defer remoteFile.Close()
+
+	if offset > 0 {
+		_, err = localFile.Seek(offset, io.SeekStart)
+		if err != nil {
+			return fmt.Errorf("failed to seek local file: %w", err)
+		}
+	}
+
+	buffer := make([]byte, 32*1024)
+	uploaded := offset
+
+	if progressCallback != nil {
+		progressCallback(uploaded, totalSize)
+	}
+
+	for {
+		n, err := localFile.Read(buffer)
+		if n > 0 {
+			_, writeErr := remoteFile.Write(buffer[:n])
+			if writeErr != nil {
+				return fmt.Errorf("failed to write to remote file: %w", writeErr)
+			}
+			uploaded += int64(n)
+
+			if progressCallback != nil && uploaded%(1024*1024) < int64(n) {
+				progressCallback(uploaded, totalSize)
+			}
+		}
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read local file: %w", err)
+		}
+	}
+
+	if err := c.sftpClient.Rename(remotePartPath, remotePath); err != nil {
+		return fmt.Errorf("failed to rename remote part file: %w", err)
+	}
+
+	// Финальный прогресс
+	if progressCallback != nil {
+		progressCallback(totalSize, totalSize)
+	}
+
+	logger.Get().Debug().
+		Str("file", localPath).
+		Int64("total", totalSize).
+		Msg("Upload completed successfully")
+
+	return nil
+}
+
+func (c *SSHClient) UploadWithRetryProgress(localPath, remotePath string, progressCallback func(uploaded, total int64)) error {
 	var lastErr error
 	for attempt := 0; attempt < c.config.RetryMaxAtmpt; attempt++ {
 		if attempt > 0 {
@@ -553,7 +780,7 @@ func (c *SSHClient) UploadWithRetry(localPath, remotePath string) error {
 			time.Sleep(c.config.RetryDelay)
 		}
 
-		err := c.UploadResumable(localPath, remotePath)
+		err := c.UploadWithProgress(localPath, remotePath, progressCallback)
 		if err == nil {
 			return nil
 		}
