@@ -9,6 +9,7 @@ func RegisterRoutes(
 	e *echo.Echo,
 	healthHandler *HealthHandler,
 	serverHandler *ServerHandler,
+	taskHandler *TaskHandler,
 ) {
 	e.GET("/live", healthHandler.Liveness)
 	e.GET("/healthz", healthHandler.Readiness)
@@ -23,6 +24,10 @@ func RegisterRoutes(
 	servers.GET("/:id", serverHandler.GetServer)
 	servers.DELETE("/:id", serverHandler.DeleteServer)
 	servers.PUT("/:id", serverHandler.UpdateServer)
+
+	tasks := v1.Group("/tasks")
+	tasks.GET("", taskHandler.ListTasks)
+	tasks.GET("/:id", taskHandler.GetTask)
 
 	v1.GET("/workers/stats", serverHandler.GetWorkerStats)
 }
