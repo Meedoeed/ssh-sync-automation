@@ -134,14 +134,18 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 		remoteFilePath := filepath.Join(remotePath, file)
 		localFilePath := filepath.Join(localPath, file)
 
+		fileSize := s.getRemoteFileSize(sshClient, remoteFilePath)
+
 		task := &domain.SyncTask{
-			ID:         uuid.New(),
-			ServerID:   server.ID,
-			Direction:  domain.DirectionDownload,
-			FileName:   file,
-			RemotePath: remoteFilePath,
-			LocalPath:  localFilePath,
-			Status:     domain.StatusPending,
+			ID:               uuid.New(),
+			ServerID:         server.ID,
+			Direction:        domain.DirectionDownload,
+			FileName:         file,
+			RemotePath:       remoteFilePath,
+			LocalPath:        localFilePath,
+			FileSize:         fileSize,
+			BytesTransferred: 0,
+			Status:           domain.StatusPending,
 		}
 
 		if err := s.taskRepo.Create(ctx, task); err != nil {
@@ -152,16 +156,20 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 			continue
 		}
 
-		if err := sshClient.DownloadWithRetry(remoteFilePath, localFilePath); err != nil {
+		s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusProcessing, nil)
+
+		err = sshClient.DownloadWithRetryProgress(remoteFilePath, localFilePath, func(downloaded, total int64) {
+			s.taskRepo.UpdateProgress(ctx, task.ID, downloaded)
+		})
+
+		if err != nil {
 			logger.Get().Error().
 				Err(err).
 				Str("file", file).
 				Msg("Failed to download file")
 
 			errMsg := err.Error()
-			if err := s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusFailed, &errMsg); err != nil {
-				logger.Get().Warn().Err(err).Msg("Failed to update task status")
-			}
+			s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusFailed, &errMsg)
 			continue
 		}
 
@@ -172,13 +180,13 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 				Msg("Failed to delete remote file after download")
 		}
 
-		if err := s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusCompleted, nil); err != nil {
-			logger.Get().Warn().Err(err).Msg("Failed to update task status")
-		}
+		s.taskRepo.UpdateProgress(ctx, task.ID, fileSize)
+		s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusCompleted, nil)
 
 		logger.Get().Info().
 			Str("server", server.Name).
 			Str("file", file).
+			Int64("size", fileSize).
 			Msg("File downloaded successfully")
 	}
 
@@ -222,14 +230,22 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 		localFilePath := filepath.Join(localPath, file.Name())
 		remoteFilePath := filepath.Join(remotePath, file.Name())
 
+		fileInfo, err := os.Stat(localFilePath)
+		var fileSize int64 = 0
+		if err == nil {
+			fileSize = fileInfo.Size()
+		}
+
 		task := &domain.SyncTask{
-			ID:         uuid.New(),
-			ServerID:   server.ID,
-			Direction:  domain.DirectionUpload,
-			FileName:   file.Name(),
-			RemotePath: remoteFilePath,
-			LocalPath:  localFilePath,
-			Status:     domain.StatusPending,
+			ID:               uuid.New(),
+			ServerID:         server.ID,
+			Direction:        domain.DirectionUpload,
+			FileName:         file.Name(),
+			RemotePath:       remoteFilePath,
+			LocalPath:        localFilePath,
+			FileSize:         fileSize,
+			BytesTransferred: 0,
+			Status:           domain.StatusPending,
 		}
 
 		if err := s.taskRepo.Create(ctx, task); err != nil {
@@ -240,16 +256,21 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 			continue
 		}
 
-		if err := sshClient.UploadWithRetry(localFilePath, remoteFilePath); err != nil {
+		s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusProcessing, nil)
+
+		err = sshClient.UploadWithRetryProgress(localFilePath, remoteFilePath, func(uploaded, total int64) {
+			s.taskRepo.UpdateProgress(ctx, task.ID, uploaded)
+
+		})
+
+		if err != nil {
 			logger.Get().Error().
 				Err(err).
 				Str("file", file.Name()).
 				Msg("Failed to upload file")
 
 			errMsg := err.Error()
-			if err := s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusFailed, &errMsg); err != nil {
-				logger.Get().Warn().Err(err).Msg("Failed to update task status")
-			}
+			s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusFailed, &errMsg)
 			continue
 		}
 
@@ -260,17 +281,29 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 				Msg("Failed to delete local file after upload")
 		}
 
-		if err := s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusCompleted, nil); err != nil {
-			logger.Get().Warn().Err(err).Msg("Failed to update task status")
-		}
+		s.taskRepo.UpdateProgress(ctx, task.ID, fileSize)
+		s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusCompleted, nil)
 
 		logger.Get().Info().
 			Str("server", server.Name).
 			Str("file", file.Name()).
+			Int64("size", fileSize).
 			Msg("File uploaded successfully")
 	}
 
 	return nil
+}
+
+func (s *SyncService) getRemoteFileSize(sshClient infrastructure.SSHClientInterface, remotePath string) int64 {
+	size, err := sshClient.GetFileSize(remotePath)
+	if err != nil {
+		logger.Get().Warn().
+			Err(err).
+			Str("remote_path", remotePath).
+			Msg("Failed to get remote file size")
+		return 0
+	}
+	return size
 }
 
 func (s *SyncService) updateServerStatus(ctx context.Context, serverID uuid.UUID, status string, errMsg *string) error {
