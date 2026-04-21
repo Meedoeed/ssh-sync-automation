@@ -70,12 +70,13 @@ func main() {
 
 	healthHandler := handler.NewHealthHandler(db)
 	serverHandler := handler.NewServerHandler(serverService, workerPool)
+	taskHandler := handler.NewTaskHandler(taskService)
 
 	httpServer := server.NewHTTP(cfg, db, encryptor, serverService, taskService, syncService)
 
 	httpServer.SetValidator(handler.NewCustomValidator())
 
-	handler.RegisterRoutes(httpServer.GetEcho(), healthHandler, serverHandler)
+	handler.RegisterRoutes(httpServer.GetEcho(), healthHandler, serverHandler, taskHandler)
 
 	go func() {
 		if err := httpServer.Start(); err != nil {
