@@ -4,9 +4,9 @@ const Navbar = () => {
   const location = useLocation();
   
   const links = [
-    { path: '/', label: 'Dashboard', icon: '📊' },
-    { path: '/servers', label: 'Servers', icon: '🖥️' },
-    { path: '/tasks', label: 'Tasks', icon: '📋' },
+    { path: '/', label: 'Dashboard' },
+    { path: '/servers', label: 'Servers' },
+    { path: '/tasks', label: 'Tasks' },
   ];
   
   return (
@@ -19,7 +19,6 @@ const Navbar = () => {
             to={link.path}
             className={`hover:text-gray-300 ${location.pathname === link.path ? 'text-blue-400' : ''}`}
           >
-            <span className="mr-1">{link.icon}</span>
             {link.label}
           </Link>
         ))}

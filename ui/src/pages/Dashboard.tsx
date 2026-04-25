@@ -176,7 +176,7 @@ const Dashboard = () => {
                           {task.status === 'completed' ? '✓ Completed' :
                            task.status === 'failed' ? '✗ Failed' :
                            task.status === 'processing' ? '⟳ Processing' :
-                           '⏳ Pending'}
+                           'Pending'}
                         </span>
                       </td>
                       <td className="p-3">
