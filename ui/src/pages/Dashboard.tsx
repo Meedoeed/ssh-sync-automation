@@ -20,133 +20,185 @@ const Dashboard = () => {
         setServers(serversRes.data);
         setTasks(tasksRes.data);
       } catch (error) {
-        console.error('Ошибка:', error);
+        console.error('Ошибка загрузки данных:', error);
       } finally {
         setLoading(false);
       }
     };
     
     fetchData();
-    const interval = setInterval(fetchData, 10000);
+    const interval = setInterval(fetchData, 10000); // обновление каждые 10 секунд
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) return (
-    <div className="flex h-[60vh] items-center justify-center">
-      <div className="flex flex-col items-center gap-2">
-        <div className="w-8 h-8 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Синхронизация данных</div>
-      </div>
-    </div>
-  );
+  if (loading) return <div className="text-center py-10">Загрузка...</div>;
 
-  const runningWorkers = stats?.workers.filter(w => w.state === 'running') || [];
+  const onlineCount = stats?.workers.filter(w => w.state === 'running').length || 0;
+  const totalTasks = tasks.length;
+  const failedTasks = tasks.filter(t => t.status === 'failed').length;
+  const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'processing').length;
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-10">
-      {/* Заголовок — теперь аккуратный */}
-      <section className="flex items-center gap-4">
-        <div className="h-8 w-[3px] bg-slate-900"></div>
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-            Панель управления
-          </h1>
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            Общая статистика системы
-          </div>
+    <div>
+      <h1 className="text-2xl font-bold mb-6">Панель управления</h1>
+      
+      {/* Карточки статистики */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-gray-500 text-sm">Всего серверов</div>
+          <div className="text-2xl font-bold">{servers.length}</div>
         </div>
-      </section>
-
-      {/* Верхние показатели */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Серверы', value: servers.length, color: 'text-slate-900' },
-          { label: 'В сети', value: runningWorkers.length, color: 'text-emerald-500' },
-          { label: 'Задачи', value: tasks.length, color: 'text-blue-600' },
-          { label: 'Ошибки', value: tasks.filter(t => t.status === 'failed').length, color: 'text-rose-500' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white border border-slate-100 p-6 rounded-xl shadow-sm">
-            <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{stat.label}</div>
-            <div className={`text-2xl font-black ${stat.color}`}>{stat.value}</div>
-          </div>
-        ))}
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-gray-500 text-sm">Активных воркеров</div>
+          <div className="text-2xl font-bold text-green-600">{onlineCount}</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-gray-500 text-sm">Всего задач</div>
+          <div className="text-2xl font-bold">{totalTasks}</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-gray-500 text-sm">Ошибок</div>
+          <div className="text-2xl font-bold text-red-600">{failedTasks}</div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Секция Воркеров */}
-        <div className="lg:col-span-7 space-y-6">
-          <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-3">
-            Состояние воркеров
-          </h2>
-
-          {!stats?.workers || stats.workers.length === 0 ? (
-            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl py-16 px-6 text-center">
-              <div className="text-slate-400 font-bold text-sm mb-1">Список серверов пуст</div>
-              <p className="text-slate-400 text-[11px] uppercase tracking-tighter">Добавьте свой первый сервер в разделе «Серверы», чтобы запустить синхронизацию</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {stats.workers.map(worker => (
-                <div key={worker.server_id} className="bg-white border border-slate-100 p-5 rounded-xl flex items-center justify-between group hover:border-slate-300 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-2 h-2 rounded-full ${worker.state === 'running' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-300'}`}></div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-800 uppercase tracking-tight">{worker.server_name}</div>
-                      <div className="text-[10px] font-medium text-slate-400 tabular-nums">
-                        {worker.last_sync ? `Последняя синхронизация: ${new Date(worker.last_sync).toLocaleTimeString()}` : 'Ожидание запуска'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-6">
-                    <div className="text-center">
-                      <div className="text-[8px] font-black text-slate-300 uppercase">Success</div>
-                      <div className="text-xs font-bold text-slate-600">{worker.sync_count}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-[8px] font-black text-slate-300 uppercase">Errors</div>
-                      <div className="text-xs font-bold text-rose-500">{worker.error_count}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Дополнительная статистика */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-gray-500 text-sm mb-2">В ожидании</div>
+          <div className="text-2xl font-bold text-yellow-600">{pendingTasks}</div>
         </div>
-
-        {/* Секция Задач */}
-        <div className="lg:col-span-5 space-y-6">
-          <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-3">
-            Активные задачи
-          </h2>
-          <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm min-h-[300px]">
-            {tasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full py-20 px-10 text-center">
-                <div className="text-slate-400 font-bold text-sm mb-1">Задачи отсутствуют</div>
-                <p className="text-slate-400 text-[11px] uppercase tracking-tighter">На данный момент нет файлов в очереди на обработку</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                {tasks.slice(0, 6).map(task => (
-                  <div key={task.id} className="p-4 hover:bg-slate-50 transition-colors">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[11px] font-bold text-slate-700 truncate max-w-[180px]">{task.file_name}</span>
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
-                        task.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-gray-500 text-sm mb-2">Активных серверов</div>
+          <div className="text-2xl font-bold text-blue-600">{servers.filter(s => s.is_active).length}</div>
+        </div>
+      </div>
+      
+      {/* Статус воркеров */}
+      <div className="bg-white rounded-lg shadow mb-8">
+        <div className="p-4 border-b font-semibold">Статус воркеров</div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="p-3 text-left">Сервер</th>
+                <th className="p-3 text-left">Статус</th>
+                <th className="p-3 text-left">Последняя синхронизация</th>
+                <th className="p-3 text-left">Успешно / Ошибок</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats?.workers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-gray-500">
+                    Нет активных воркеров. Добавьте сервер для начала синхронизации.
+                  </td>
+                </tr>
+              ) : (
+                stats?.workers.map(worker => (
+                  <tr key={worker.server_id} className="border-t hover:bg-gray-50">
+                    <td className="p-3 font-medium">{worker.server_name}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        worker.state === 'running' ? 'bg-green-100 text-green-800' :
+                        worker.state === 'error' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
-                        {task.status === 'completed' ? 'Завершено' : 'В процессе'}
+                        {worker.state === 'running' ? '🟢 Работает' : 
+                         worker.state === 'error' ? '🔴 Ошибка' : '⚫ Остановлен'}
                       </span>
-                    </div>
-                    <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="bg-slate-900 h-full transition-all duration-500"
-                        style={{ width: `${task.progress || 0}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                    </td>
+                    <td className="p-3 text-sm">
+                      {worker.last_sync ? new Date(worker.last_sync).toLocaleString() : '-'}
+                    </td>
+                    <td className="p-3">
+                      <span className="text-green-600">✓ {worker.sync_count}</span>
+                      {' / '}
+                      <span className="text-red-600">✗ {worker.error_count}</span>
+                      {worker.last_error && (
+                        <div className="text-xs text-red-500 mt-1 truncate max-w-xs">
+                          {worker.last_error}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Последние задачи */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-4 border-b font-semibold">Последние задачи</div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="p-3 text-left">Файл</th>
+                <th className="p-3 text-left">Направление</th>
+                <th className="p-3 text-left">Статус</th>
+                <th className="p-3 text-left">Прогресс</th>
+                <th className="p-3 text-left">Время</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-gray-500">
+                    Нет задач. Загрузите файлы для начала синхронизации.
+                  </td>
+                </tr>
+              ) : (
+                tasks.slice(0, 5).map(task => {
+                  const server = servers.find(s => s.id === task.server_id);
+                  return (
+                    <tr key={task.id} className="border-t hover:bg-gray-50">
+                      <td className="p-3">
+                        <div className="font-mono text-sm">{task.file_name}</div>
+                        <div className="text-xs text-gray-500">{server?.name}</div>
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          task.direction === 'upload' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {task.direction === 'upload' ? '↑ Загрузка' : '↓ Скачивание'}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          task.status === 'failed' ? 'bg-red-100 text-red-800' :
+                          task.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {task.status === 'completed' ? '✓ Завершена' :
+                           task.status === 'failed' ? '✗ Ошибка' :
+                           task.status === 'processing' ? '⟳ Выполняется' :
+                           '⏳ Ожидает'}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${task.progress || 0}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500 mt-1 block">
+                          {Math.round(task.progress || 0)}%
+                        </span>
+                      </td>
+                      <td className="p-3 text-sm text-gray-500">
+                        {new Date(task.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
