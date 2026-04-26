@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
-	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
+	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/ssh"
 	"github.com/Meedoeed/ssh-sync-automation/internal/repository"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 	"github.com/google/uuid"
@@ -28,7 +28,7 @@ type Worker struct {
 	serverID    uuid.UUID
 	serverName  string
 	state       State
-	sshClient   infrastructure.SSHClientInterface
+	sshClient   ssh.SSHClientInterface
 	syncService *service.SyncService
 	statusRepo  repository.ServerStatusRepository
 
@@ -51,7 +51,7 @@ type Config struct {
 func NewWorker(
 	serverID uuid.UUID,
 	serverName string,
-	sshClient infrastructure.SSHClientInterface,
+	sshClient ssh.SSHClientInterface,
 	cfg *Config,
 ) *Worker {
 	return &Worker{

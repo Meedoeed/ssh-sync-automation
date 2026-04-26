@@ -8,8 +8,8 @@ import (
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/config"
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
-	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
+	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/ssh"
 	"github.com/Meedoeed/ssh-sync-automation/internal/repository"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 	"github.com/google/uuid"
@@ -137,7 +137,7 @@ func (p *Pool) AddWorker(ctx context.Context, server *domain.Server) error {
 		return fmt.Errorf("worker for server %s already exists", server.Name)
 	}
 
-	sshClient := infrastructure.NewSSHClient(&config.SyncCfg{
+	sshClient := ssh.NewSSHClient(&config.SyncCfg{
 		SSHConTimeout: p.syncCfg.SSHConTimeout,
 		SSHKeepAlive:  p.syncCfg.SSHKeepAlive,
 		RetryMaxAtmpt: p.syncCfg.RetryMaxAtmpt,
