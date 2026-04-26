@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -221,6 +222,7 @@ func (w *Worker) runSync(ctx context.Context) {
 		w.errorCount++
 		w.lastError = "SSH connection failed"
 		w.lastSync = time.Now()
+		w.updateStatus(ctx, "offline", &w.lastError)
 		w.mu.Unlock()
 		return
 	}
@@ -230,6 +232,23 @@ func (w *Worker) runSync(ctx context.Context) {
 	w.mu.Lock()
 	w.lastSync = time.Now()
 	if err != nil {
+		if ctx.Err() == context.Canceled {
+			logger.Get().Warn().
+				Str("server_name", w.serverName).
+				Msg("Sync cycle was cancelled (possible file removed during transfer)")
+			w.mu.Unlock()
+			return
+		}
+
+		if strings.Contains(err.Error(), "file does not exist") {
+			logger.Get().Warn().
+				Str("server_name", w.serverName).
+				Str("error", err.Error()).
+				Msg("File disappeared during sync, skipping")
+			w.mu.Unlock()
+			return
+		}
+
 		w.errorCount++
 		w.lastError = err.Error()
 		w.updateStatus(ctx, "error", &w.lastError)
@@ -265,6 +284,9 @@ func (w *Worker) ensureConnection(ctx context.Context) bool {
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		select {
 		case <-ctx.Done():
+			logger.Get().Debug().
+				Str("server_name", w.serverName).
+				Msg("Reconnection cancelled")
 			return false
 		default:
 		}
