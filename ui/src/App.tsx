@@ -8,7 +8,9 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Layout выступает как родительский роут */}
         <Route path="/" element={<Layout />}>
+          {/* index означает, что Dashboard откроется по пути "/" */}
           <Route index element={<Dashboard />} />
           <Route path="servers" element={<Servers />} />
           <Route path="tasks" element={<Tasks />} />

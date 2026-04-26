@@ -4,7 +4,7 @@ const Navbar = () => {
   const location = useLocation();
 
   const menuItems = [
-    { path: '/', label: 'Дашборд', icon: (
+    { path: '/', label: 'Скрипты', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
@@ -23,6 +23,7 @@ const Navbar = () => {
 
   return (
     <nav className="fixed left-0 top-0 h-screen w-24 bg-white border-r border-slate-100 flex flex-col items-center py-10 z-50">
+
       <div className="mb-12">
         <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-slate-200">
           <span className="font-black text-xl italic">S</span>
@@ -57,6 +58,7 @@ const Navbar = () => {
           );
         })}
       </div>
+
     </nav>
   );
 };
