@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
-	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
+	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/ssh"
 	"github.com/Meedoeed/ssh-sync-automation/internal/repository"
 	"github.com/google/uuid"
 )
@@ -35,7 +36,7 @@ func NewSyncService(
 	}
 }
 
-func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshClient infrastructure.SSHClientInterface) error {
+func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshClient ssh.SSHClientInterface) error {
 	server, err := s.serverRepo.GetByID(ctx, serverID)
 	if err != nil {
 		return fmt.Errorf("failed to get server: %w", err)
@@ -102,7 +103,7 @@ func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshCli
 	return nil
 }
 
-func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, sshClient infrastructure.SSHClientInterface) error {
+func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, sshClient ssh.SSHClientInterface) error {
 	remotePath := "done/"
 	localPath := filepath.Join(s.baseLocalDir, "done", server.Name)
 
@@ -132,7 +133,7 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 		}
 
 		remoteFilePath := filepath.Join(remotePath, file)
-		localFilePath := filepath.Join(localPath, file)
+		localFilePath := s.getUniqueLocalPath(localPath, file)
 
 		fileSize := s.getRemoteFileSize(sshClient, remoteFilePath)
 
@@ -153,6 +154,43 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 				Err(err).
 				Str("file", file).
 				Msg("Failed to create download task")
+			continue
+		}
+
+		if fileSize == 0 {
+			logger.Get().Debug().
+				Str("server", server.Name).
+				Str("file", file).
+				Msg("Empty file detected, creating empty local file")
+
+			emptyFile, err := os.Create(localFilePath)
+			if err != nil {
+				logger.Get().Error().
+					Err(err).
+					Str("file", file).
+					Msg("Failed to create empty local file")
+
+				errMsg := err.Error()
+				s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusFailed, &errMsg)
+				continue
+			}
+			emptyFile.Close()
+
+			if err := sshClient.DeleteFile(remoteFilePath); err != nil {
+				logger.Get().Warn().
+					Err(err).
+					Str("file", file).
+					Msg("Failed to delete empty remote file")
+			}
+
+			s.taskRepo.UpdateProgress(ctx, task.ID, 0)
+			s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusCompleted, nil)
+
+			logger.Get().Info().
+				Str("server", server.Name).
+				Str("file", file).
+				Str("saved_as", filepath.Base(localFilePath)).
+				Msg("Empty file downloaded successfully")
 			continue
 		}
 
@@ -186,6 +224,7 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 		logger.Get().Info().
 			Str("server", server.Name).
 			Str("file", file).
+			Str("saved_as", filepath.Base(localFilePath)).
 			Int64("size", fileSize).
 			Msg("File downloaded successfully")
 	}
@@ -193,7 +232,7 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 	return nil
 }
 
-func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, sshClient infrastructure.SSHClientInterface) error {
+func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, sshClient ssh.SSHClientInterface) error {
 	localPath := filepath.Join(s.baseLocalDir, "tasks", server.Name)
 	remotePath := "tasks/"
 
@@ -228,7 +267,8 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 		}
 
 		localFilePath := filepath.Join(localPath, file.Name())
-		remoteFilePath := filepath.Join(remotePath, file.Name())
+
+		remoteFilePath := s.getUniqueRemotePath(sshClient, remotePath, file.Name())
 
 		fileInfo, err := os.Stat(localFilePath)
 		var fileSize int64 = 0
@@ -256,11 +296,47 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 			continue
 		}
 
+		if fileSize == 0 {
+			logger.Get().Debug().
+				Str("server", server.Name).
+				Str("file", file.Name()).
+				Msg("Empty file detected, creating empty file on server")
+
+			remoteEmptyFile, err := sshClient.CreateEmptyFile(remoteFilePath)
+			if err != nil {
+				logger.Get().Error().
+					Err(err).
+					Str("file", file.Name()).
+					Msg("Failed to create empty file on server")
+
+				errMsg := err.Error()
+				s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusFailed, &errMsg)
+				continue
+			}
+			_ = remoteEmptyFile
+
+			if err := os.Remove(localFilePath); err != nil {
+				logger.Get().Warn().
+					Err(err).
+					Str("file", file.Name()).
+					Msg("Failed to delete local empty file")
+			}
+
+			s.taskRepo.UpdateProgress(ctx, task.ID, 0)
+			s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusCompleted, nil)
+
+			logger.Get().Info().
+				Str("server", server.Name).
+				Str("file", file.Name()).
+				Str("uploaded_as", filepath.Base(remoteFilePath)).
+				Msg("Empty file uploaded successfully")
+			continue
+		}
+
 		s.taskRepo.UpdateStatus(ctx, task.ID, domain.StatusProcessing, nil)
 
 		err = sshClient.UploadWithRetryProgress(localFilePath, remoteFilePath, func(uploaded, total int64) {
 			s.taskRepo.UpdateProgress(ctx, task.ID, uploaded)
-
 		})
 
 		if err != nil {
@@ -287,6 +363,7 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 		logger.Get().Info().
 			Str("server", server.Name).
 			Str("file", file.Name()).
+			Str("uploaded_as", filepath.Base(remoteFilePath)).
 			Int64("size", fileSize).
 			Msg("File uploaded successfully")
 	}
@@ -294,7 +371,79 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 	return nil
 }
 
-func (s *SyncService) getRemoteFileSize(sshClient infrastructure.SSHClientInterface, remotePath string) int64 {
+func (s *SyncService) getUniqueRemotePath(sshClient ssh.SSHClientInterface, dir, filename string) string {
+	ext := filepath.Ext(filename)
+	name := strings.TrimSuffix(filename, ext)
+	basePath := filepath.Join(dir, filename)
+
+	exists, err := s.remoteFileExists(sshClient, basePath)
+	if err == nil && !exists {
+		logger.Get().Debug().
+			Str("file", filename).
+			Msg("File does not exist on server, using original name")
+		return basePath
+	}
+
+	logger.Get().Debug().
+		Str("file", filename).
+		Msg("File already exists on server, looking for unique name")
+
+	for i := 1; i <= 1000; i++ {
+		newName := fmt.Sprintf("%s (%d)%s", name, i, ext)
+		newPath := filepath.Join(dir, newName)
+		exists, err := s.remoteFileExists(sshClient, newPath)
+		if err == nil && !exists {
+			logger.Get().Debug().
+				Str("original", filename).
+				Str("new", newName).
+				Msg("Found unique name for upload")
+			return newPath
+		}
+	}
+
+	return filepath.Join(dir, fmt.Sprintf("%s (999)%s", name, ext))
+}
+
+func (s *SyncService) getUniqueLocalPath(dir, filename string) string {
+	ext := filepath.Ext(filename)
+	name := strings.TrimSuffix(filename, ext)
+	basePath := filepath.Join(dir, filename)
+
+	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+		return basePath
+	}
+
+	logger.Get().Debug().
+		Str("file", filename).
+		Msg("File already exists locally, looking for unique name")
+
+	for i := 1; i <= 1000; i++ {
+		newName := fmt.Sprintf("%s (%d)%s", name, i, ext)
+		newPath := filepath.Join(dir, newName)
+		if _, err := os.Stat(newPath); os.IsNotExist(err) {
+			logger.Get().Debug().
+				Str("original", filename).
+				Str("new", newName).
+				Msg("Found unique name for download")
+			return newPath
+		}
+	}
+
+	return filepath.Join(dir, fmt.Sprintf("%s (999)%s", name, ext))
+}
+
+func (s *SyncService) remoteFileExists(sshClient ssh.SSHClientInterface, remotePath string) (bool, error) {
+	_, err := sshClient.GetFileSize(remotePath)
+	if err != nil {
+		if strings.Contains(err.Error(), "file does not exist") || strings.Contains(err.Error(), "no such file") {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func (s *SyncService) getRemoteFileSize(sshClient ssh.SSHClientInterface, remotePath string) int64 {
 	size, err := sshClient.GetFileSize(remotePath)
 	if err != nil {
 		logger.Get().Warn().
