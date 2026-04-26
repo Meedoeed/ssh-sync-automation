@@ -27,95 +27,57 @@ const Servers = () => {
       const res = await api.getServers();
       setServers(res.data);
     } catch (error) {
-      console.error('Failed to fetch servers:', error);
+      console.error('Ошибка загрузки серверов:', error);
     } finally {
       setLoading(false);
     }
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    const data: any = {};
-    
-    // Отправляем только измененные поля при редактировании
-    if (editingServer) {
-      if (formData.name !== editingServer.name) data.name = formData.name;
-      if (formData.host !== editingServer.host) data.host = formData.host;
-      if (formData.port !== editingServer.port) data.port = formData.port;
-      if (formData.username !== editingServer.username) data.username = formData.username;
-      if (formData.auth_type !== editingServer.auth_type) data.auth_type = formData.auth_type;
-      if (formData.is_active !== editingServer.is_active) data.is_active = formData.is_active;
-      
-      // Для пароля/ключа отправляем только если ввели новые
-      if (formData.auth_type === 'password' && formData.password) {
-        data.password = formData.password;
-      }
-      if (formData.auth_type === 'key' && formData.private_key) {
-        data.private_key = formData.private_key;
-      }
-    } else {
-      // При создании отправляем все поля
-      data.name = formData.name;
-      data.host = formData.host;
-      data.port = formData.port;
-      data.username = formData.username;
-      data.auth_type = formData.auth_type;
-      data.is_active = formData.is_active;
-      
-      if (formData.auth_type === 'password') {
-        data.password = formData.password;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const data: any = {};
+      if (editingServer) {
+        if (formData.name !== editingServer.name) data.name = formData.name;
+        if (formData.host !== editingServer.host) data.host = formData.host;
+        if (formData.port !== editingServer.port) data.port = formData.port;
+        if (formData.username !== editingServer.username) data.username = formData.username;
+        if (formData.auth_type !== editingServer.auth_type) data.auth_type = formData.auth_type;
+        if (formData.is_active !== editingServer.is_active) data.is_active = formData.is_active;
+        if (formData.auth_type === 'password' && formData.password) data.password = formData.password;
+        if (formData.auth_type === 'key' && formData.private_key) data.private_key = formData.private_key;
       } else {
-        data.private_key = formData.private_key;
+        Object.assign(data, { ...formData });
+        if (formData.auth_type === 'password') delete data.private_key;
+        else delete data.password;
       }
-    }
-    
-    // Если нет полей для обновления, показываем сообщение
-    if (editingServer && Object.keys(data).length === 0) {
-      alert('No changes to update');
-      setShowModal(false);
-      setEditingServer(null);
-      return;
-    }
-    
-    if (editingServer) {
-      await api.updateServer(editingServer.id, data);
-    } else {
-      await api.createServer(data);
-    }
-    
-    setShowModal(false);
-    setEditingServer(null);
-    resetForm();
-    fetchServers();
-  } catch (error: any) {
-    console.error('Failed to save server:', error);
-    const errorMsg = error.response?.data?.error || 'Failed to save server';
-    alert(errorMsg);
-  }
-};
 
-const resetForm = () => {
-  setFormData({
-    name: '',
-    host: '',
-    port: 22,
-    username: '',
-    auth_type: 'password',
-    password: '',
-    private_key: '',
-    is_active: true,
-  });
-};
+      if (editingServer && Object.keys(data).length === 0) {
+        setShowModal(false);
+        return;
+      }
+
+      editingServer ? await api.updateServer(editingServer.id, data) : await api.createServer(data);
+      setShowModal(false);
+      resetForm();
+      fetchServers();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Ошибка сохранения');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ name: '', host: '', port: 22, username: '', auth_type: 'password', password: '', private_key: '', is_active: true });
+    setEditingServer(null);
+  };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this server?')) {
+    if (window.confirm('Удалить этот сервер из системы?')) {
       try {
         await api.deleteServer(id);
         fetchServers();
       } catch (error) {
-        console.error('Failed to delete server:', error);
-        alert('Failed to delete server');
+        console.error(error);
       }
     }
   };
@@ -125,270 +87,192 @@ const resetForm = () => {
       await api.updateServer(server.id, { is_active: !server.is_active });
       fetchServers();
     } catch (error) {
-      console.error('Failed to toggle server status:', error);
+      console.error(error);
     }
-  };
-
-  const openModal = (server?: Server) => {
-    if (server) {
-      setEditingServer(server);
-      setFormData({
-        name: server.name,
-        host: server.host,
-        port: server.port,
-        username: server.username,
-        auth_type: server.auth_type,
-        password: '',
-        private_key: '',
-        is_active: server.is_active,
-      });
-    } else {
-      setEditingServer(null);
-      setFormData({
-        name: '',
-        host: '',
-        port: 22,
-        username: '',
-        auth_type: 'password',
-        password: '',
-        private_key: '',
-        is_active: true,
-      });
-    }
-    setShowModal(true);
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading servers...</div>
+      <div className="flex justify-center items-center h-96">
+        <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Servers</h1>
+    <div className="max-w-7xl mx-auto space-y-10">
+      <div className="flex justify-between items-end">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-light tracking-tight text-slate-900">Узлы сети</h1>
+          <p className="text-slate-500 text-sm uppercase tracking-widest font-semibold">Управление SSH-соединениями</p>
+        </div>
         <button
-          onClick={() => openModal()}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+          onClick={() => { resetForm(); setShowModal(true); }}
+          className="bg-slate-900 text-white px-6 py-3 rounded-2xl text-sm font-bold tracking-wide hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 active:scale-95"
         >
-          + Add Server
+          Добавить узел
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="p-3 text-left text-sm font-semibold text-gray-600">Name</th>
-              <th className="p-3 text-left text-sm font-semibold text-gray-600">Host:Port</th>
-              <th className="p-3 text-left text-sm font-semibold text-gray-600">Username</th>
-              <th className="p-3 text-left text-sm font-semibold text-gray-600">Auth</th>
-              <th className="p-3 text-left text-sm font-semibold text-gray-600">Status</th>
-              <th className="p-3 text-left text-sm font-semibold text-gray-600">Last Seen</th>
-              <th className="p-3 text-left text-sm font-semibold text-gray-600">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {servers.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="p-8 text-center text-gray-500">
-                  No servers configured. Click "Add Server" to get started.
-                </td>
-              </tr>
-            ) : (
-              servers.map((server) => (
-                <tr key={server.id} className="border-t hover:bg-gray-50">
-                  <td className="p-3 font-medium">{server.name}</td>
-                  <td className="p-3">
-                    <code className="text-sm bg-gray-100 px-2 py-1 rounded">
-                      {server.host}:{server.port}
-                    </code>
-                  </td>
-                  <td className="p-3">{server.username}</td>
-                  <td className="p-3">
-                    <span className="px-2 py-1 rounded text-xs bg-gray-100">
-                      {server.auth_type}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => handleToggleActive(server)}
-                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                        server.is_active
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                      }`}
-                    >
-                      {server.is_active ? 'Active' : 'Inactive'}
-                    </button>
-                  </td>
-                  <td className="p-3 text-sm text-gray-500">
-                    {server.last_seen ? new Date(server.last_seen).toLocaleString() : '-'}
-                  </td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => openModal(server)}
-                      className="text-blue-500 hover:text-blue-700 mr-3 text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(server.id)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {servers.length === 0 ? (
+          <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+            <span className="text-slate-400 font-medium">Список серверов пуст</span>
+          </div>
+        ) : (
+          servers.map((server) => (
+            <div key={server.id} className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:translate-y-[-4px] transition-all duration-300 group">
+              <div className="flex justify-between items-start mb-6">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-semibold text-slate-800">{server.name}</h3>
+                  <code className="text-[11px] bg-slate-50 text-slate-500 px-2 py-1 rounded tracking-tight">
+                    {server.host}:{server.port}
+                  </code>
+                </div>
+                <button
+                  onClick={() => handleToggleActive(server)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${server.is_active ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${server.is_active ? 'left-7' : 'left-1'}`}></div>
+                </button>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Пользователь</span>
+                  <span className="text-slate-700 font-medium">{server.username}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Авторизация</span>
+                  <span className="text-slate-700 font-medium">{server.auth_type === 'password' ? 'Пароль' : 'RSA Ключ'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Активность</span>
+                  <span className="text-slate-500 font-light italic">
+                    {server.last_seen ? new Date(server.last_seen).toLocaleDateString() : 'Нет данных'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4 border-t border-slate-50">
+                <button
+                  onClick={() => { setEditingServer(server); setFormData({ ...server, password: '', private_key: '' }); setShowModal(true); }}
+                  className="flex-1 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all"
+                >
+                  Настроить
+                </button>
+                <button
+                  onClick={() => handleDelete(server.id)}
+                  className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                >
+                  Удалить
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">
-                {editingServer ? 'Edit Server' : 'Add Server'}
-              </h2>
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Name *
-                    </label>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-10">
+              <div className="flex flex-col gap-2 mb-8">
+                <h2 className="text-2xl font-semibold text-slate-900">
+                  {editingServer ? 'Параметры узла' : 'Новое подключение'}
+                </h2>
+                <p className="text-sm text-slate-400">Заполните данные для SSH доступа</p>
+              </div>
+              
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Название метки</label>
                     <input
-                      type="text"
-                      required
-                      value={formData.name}
+                      type="text" required value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="my-server-1"
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all placeholder:text-slate-300 text-sm"
+                      placeholder="Production Main"
                     />
                   </div>
-                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Host *
-                    </label>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">IP / Хост</label>
                     <input
-                      type="text"
-                      required
-                      value={formData.host}
+                      type="text" required value={formData.host}
                       onChange={(e) => setFormData({ ...formData, host: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="192.168.1.100 or host.docker.internal"
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all text-sm"
+                      placeholder="1.1.1.1"
                     />
                   </div>
-                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Port *
-                    </label>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Порт</label>
                     <input
-                      type="number"
-                      required
-                      value={formData.port}
+                      type="number" required value={formData.port}
                       onChange={(e) => setFormData({ ...formData, port: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="22"
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all text-sm"
                     />
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Username *
-                    </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-1">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">User</label>
                     <input
-                      type="text"
-                      required
-                      value={formData.username}
+                      type="text" required value={formData.username}
                       onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="root"
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all text-sm"
                     />
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Authentication Type *
-                    </label>
+                  <div className="col-span-1">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Метод</label>
                     <select
                       value={formData.auth_type}
                       onChange={(e) => setFormData({ ...formData, auth_type: e.target.value as 'password' | 'key' })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all text-sm appearance-none"
                     >
-                      <option value="password">Password</option>
-                      <option value="key">SSH Key</option>
+                      <option value="password">Пароль</option>
+                      <option value="key">RSA Ключ</option>
                     </select>
                   </div>
-                  
-                  {formData.auth_type === 'password' ? (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Password *
-                      </label>
-                      <input
-                        type="password"
-                        required={!editingServer}
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={editingServer ? 'Leave blank to keep unchanged' : 'Enter password'}
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Private Key *
-                      </label>
-                      <textarea
-                        required={!editingServer}
-                        value={formData.private_key}
-                        onChange={(e) => setFormData({ ...formData, private_key: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                        rows={4}
-                        placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="is_active"
-                      checked={formData.is_active}
-                      onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                      className="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
-                      Active (start synchronization immediately)
-                    </label>
-                  </div>
                 </div>
-                
-                <div className="flex justify-end gap-3 mt-6">
+
+                {formData.auth_type === 'password' ? (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Пароль</label>
+                    <input
+                      type="password" required={!editingServer}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all text-sm"
+                      placeholder={editingServer ? "••••••••" : ""}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Private Key Content</label>
+                    <textarea
+                      required={!editingServer}
+                      value={formData.private_key}
+                      onChange={(e) => setFormData({ ...formData, private_key: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all font-mono text-[10px] leading-tight"
+                      rows={5}
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-6">
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowModal(false);
-                      setEditingServer(null);
-                    }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 py-4 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    Cancel
+                    Отмена
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-sm font-bold shadow-lg shadow-slate-100 hover:bg-slate-800 transition-all active:scale-95"
                   >
-                    {editingServer ? 'Update' : 'Create'}
+                    {editingServer ? 'Обновить данные' : 'Подключить сервер'}
                   </button>
                 </div>
               </form>
