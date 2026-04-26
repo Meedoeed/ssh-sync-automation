@@ -4,11 +4,9 @@ import Navbar from './Navbar';
 const Layout = () => {
   return (
     <div className="min-h-screen bg-[#FDFDFD] flex">
-      {/* Навигация всегда слева */}
       <Navbar />
 
       <div className="flex-1 ml-24 min-h-screen flex flex-col">
-        {/* Верхняя панель */}
         <header className="h-16 flex items-center justify-between px-12 bg-white/50 backdrop-blur-sm sticky top-0 z-40">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
@@ -23,7 +21,6 @@ const Layout = () => {
           </div>
         </header>
 
-        {/* Сюда будут рендериться Dashboard, Servers и Tasks */}
         <main className="p-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
           <Outlet />
         </main>
