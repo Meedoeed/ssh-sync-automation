@@ -3,6 +3,7 @@ module github.com/Meedoeed/ssh-sync-automation
 go 1.25.2
 
 require (
+	connectrpc.com/connect v1.20.0
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
@@ -12,7 +13,9 @@ require (
 	github.com/pkg/sftp v1.13.10
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/zerolog v1.35.0
+	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.49.0
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -36,7 +39,6 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
@@ -46,5 +48,4 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	google.golang.org/protobuf v1.36.8 // indirect
 )

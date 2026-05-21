@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,9 +13,11 @@ import (
 	"github.com/Meedoeed/ssh-sync-automation/internal/handler"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/encryption"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
+	"github.com/Meedoeed/ssh-sync-automation/internal/rpc"
 	"github.com/Meedoeed/ssh-sync-automation/internal/server"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
+	"github.com/Meedoeed/ssh-sync-automation/proto/genconnect"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
@@ -56,8 +59,19 @@ func runBackend(cmd *cobra.Command, args []string) {
 	taskService := service.NewTaskService(taskRepo)
 	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")
 
-	// В режиме backend worker pool НЕ запускается
-	// TODO: Релиз 2 — здесь будет RPC сервер для общения с воркерами
+	// Запуск RPC сервера для воркеров
+	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo)
+	rpcPath, rpcHandler := genconnect.NewBackendServiceHandler(rpcServer)
+
+	rpcMux := http.NewServeMux()
+	rpcMux.Handle(rpcPath, rpcHandler)
+
+	go func() {
+		logger.Get().Info().Msg("Starting RPC server on :8082")
+		if err := http.ListenAndServe(":8082", rpcMux); err != nil {
+			logger.Get().Fatal().Err(err).Msg("Failed to start RPC server")
+		}
+	}()
 
 	healthHandler := handler.NewHealthHandler(db)
 	// Временно передаём nil вместо workerPool (позже будет RPC клиент)

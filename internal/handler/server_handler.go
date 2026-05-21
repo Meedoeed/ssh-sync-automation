@@ -49,6 +49,17 @@ type ServerResponse struct {
 	LastSeen  *string `json:"last_seen,omitempty"`
 }
 
+type UpdateServerRequest struct {
+	Name       string  `json:"name,omitempty"`
+	Host       string  `json:"host,omitempty"`
+	Port       int     `json:"port,omitempty"`
+	Username   string  `json:"username,omitempty"`
+	AuthType   string  `json:"auth_type,omitempty"`
+	Password   *string `json:"password,omitempty"`
+	PrivateKey *string `json:"private_key,omitempty"`
+	IsActive   *bool   `json:"is_active,omitempty"`
+}
+
 func (h *ServerHandler) CreateServer(c echo.Context) error {
 	var req CreateServerRequest
 	if err := c.Bind(&req); err != nil {
@@ -110,7 +121,11 @@ func (h *ServerHandler) CreateServer(c echo.Context) error {
 		})
 	}
 
-	currentWorkers := len(h.workerPool.ListWorkers())
+	// Безопасное получение количества воркеров
+	currentWorkers := 0
+	if h.workerPool != nil {
+		currentWorkers = len(h.workerPool.ListWorkers())
+	}
 	logger.Get().Info().
 		Int("current_workers", currentWorkers).
 		Str("server_name", server.Name).
@@ -189,8 +204,6 @@ func (h *ServerHandler) CreateServer(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, response)
 }
-
-// internal/handler/server_handler.go
 
 func (h *ServerHandler) GetWorkerStats(c echo.Context) error {
 	if h.workerPool == nil {
@@ -343,17 +356,6 @@ func (h *ServerHandler) DeleteServer(c echo.Context) error {
 	})
 }
 
-type UpdateServerRequest struct {
-	Name       string  `json:"name,omitempty"`
-	Host       string  `json:"host,omitempty"`
-	Port       int     `json:"port,omitempty"`
-	Username   string  `json:"username,omitempty"`
-	AuthType   string  `json:"auth_type,omitempty"`
-	Password   *string `json:"password,omitempty"`
-	PrivateKey *string `json:"private_key,omitempty"`
-	IsActive   *bool   `json:"is_active,omitempty"`
-}
-
 func (h *ServerHandler) UpdateServer(c echo.Context) error {
 	id := c.Param("id")
 	serverID, err := uuid.Parse(id)
@@ -473,40 +475,36 @@ func (h *ServerHandler) UpdateServer(c echo.Context) error {
 					Msg("Worker restarted successfully after update")
 			}
 		}()
-	} else if req.IsActive != nil && *req.IsActive != wasActive {
+	} else if req.IsActive != nil && *req.IsActive != wasActive && h.workerPool != nil {
 		if *req.IsActive {
 			logger.Get().Info().
 				Str("server_name", existingServer.Name).
 				Msg("Server activated, adding worker")
 
-			if h.workerPool != nil {
-				go func() {
-					freshServer, err := h.serverService.GetServer(context.Background(), serverID)
-					if err == nil && freshServer != nil {
-						if err := h.workerPool.AddWorker(context.Background(), freshServer); err != nil {
-							logger.Get().Error().
-								Err(err).
-								Str("server_name", existingServer.Name).
-								Msg("Failed to add worker after activation")
-						}
+			go func() {
+				freshServer, err := h.serverService.GetServer(context.Background(), serverID)
+				if err == nil && freshServer != nil {
+					if err := h.workerPool.AddWorker(context.Background(), freshServer); err != nil {
+						logger.Get().Error().
+							Err(err).
+							Str("server_name", existingServer.Name).
+							Msg("Failed to add worker after activation")
 					}
-				}()
-			}
+				}
+			}()
 		} else {
 			logger.Get().Info().
 				Str("server_name", existingServer.Name).
 				Msg("Server deactivated, removing worker")
 
-			if h.workerPool != nil {
-				go func() {
-					if err := h.workerPool.RemoveWorker(serverID); err != nil {
-						logger.Get().Warn().
-							Err(err).
-							Str("server_name", existingServer.Name).
-							Msg("Failed to remove worker after deactivation")
-					}
-				}()
-			}
+			go func() {
+				if err := h.workerPool.RemoveWorker(serverID); err != nil {
+					logger.Get().Warn().
+						Err(err).
+						Str("server_name", existingServer.Name).
+						Msg("Failed to remove worker after deactivation")
+				}
+			}()
 		}
 	}
 

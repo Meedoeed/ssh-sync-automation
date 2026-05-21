@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package rpc;
+
+option go_package = "github.com/Meedoeed/ssh-sync-automation/internal/gen";
+
+service BackendService {
+  // Worker регистрация и управление
+  rpc RegisterWorker(RegisterWorkerRequest) returns (RegisterWorkerResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  
+  // Задачи
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+  rpc UpdateTaskProgress(UpdateProgressRequest) returns (UpdateProgressResponse);
+  rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse);
+  rpc FailTask(FailTaskRequest) returns (FailTaskResponse);
+  
+  // Управление задачами (для шедулера)
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+  
+  // Информация о серверах (для шедулера и воркера)
+  rpc GetServers(GetServersRequest) returns (GetServersResponse);
+  rpc GetServer(GetServerRequest) returns (GetServerResponse);
+}
+
+// Worker регистрация
+message RegisterWorkerRequest {
+  string worker_id = 1;
+}
+
+message RegisterWorkerResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Heartbeat
+message HeartbeatRequest {
+  string worker_id = 1;
+}
+
+message HeartbeatResponse {
+  bool success = 1;
+}
+
+// Получение задачи
+message GetTaskRequest {
+  string worker_id = 1;
+}
+
+message GetTaskResponse {
+  bool has_task = 1;
+  Task task = 2;
+}
+
+// Задача
+message Task {
+  string id = 1;
+  string server_id = 2;
+  string direction = 3;      // "upload" или "download"
+  string file_name = 4;
+  string remote_path = 5;
+  string local_path = 6;
+  int64 file_size = 7;
+}
+
+// Обновление прогресса
+message UpdateProgressRequest {
+  string task_id = 1;
+  string worker_id = 2;
+  int64 bytes_transferred = 3;
+}
+
+message UpdateProgressResponse {
+  bool success = 1;
+}
+
+// Успешное завершение задачи
+message CompleteTaskRequest {
+  string task_id = 1;
+  string worker_id = 2;
+}
+
+message CompleteTaskResponse {
+  bool success = 1;
+}
+
+// Завершение задачи с ошибкой
+message FailTaskRequest {
+  string task_id = 1;
+  string worker_id = 2;
+  string error_message = 3;
+}
+
+message FailTaskResponse {
+  bool success = 1;
+}
+
+// Создание задачи (шедулером)
+message CreateTaskRequest {
+  string server_id = 1;
+  string direction = 2;
+  string file_name = 3;
+  string remote_path = 4;
+  string local_path = 5;
+  int64 file_size = 6;
+}
+
+message CreateTaskResponse {
+  bool success = 1;
+  string task_id = 2;
+  string error = 3;
+}
+
+// Получение списка серверов
+message GetServersRequest {
+  bool active_only = 1;
+}
+
+message GetServersResponse {
+  repeated Server servers = 1;
+}
+
+// Получение одного сервера
+message GetServerRequest {
+  string server_id = 1;
+}
+
+message GetServerResponse {
+  Server server = 1;
+}
+
+// Сервер (передаём все данные для SSH подключения)
+message Server {
+  string id = 1;
+  string name = 2;
+  string host = 3;
+  int32 port = 4;
+  string username = 5;
+  string auth_type = 6;      // "password" или "key"
+  string password = 7;       // опционально (если auth_type password)
+  string private_key = 8;    // опционально (если auth_type key)
+  bool is_active = 9;
+}
