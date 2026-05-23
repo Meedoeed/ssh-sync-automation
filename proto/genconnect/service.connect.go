@@ -5,13 +5,12 @@
 package genconnect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
+	gen "github.com/Meedoeed/ssh-sync-automation/internal/gen"
 	http "net/http"
 	strings "strings"
-
-	connect "connectrpc.com/connect"
-	gen "github.com/Meedoeed/ssh-sync-automation/internal/gen"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are
@@ -59,23 +58,23 @@ const (
 	// BackendServiceGetServerProcedure is the fully-qualified name of the BackendService's GetServer
 	// RPC.
 	BackendServiceGetServerProcedure = "/rpc.BackendService/GetServer"
+	// BackendServiceCheckTaskExistsProcedure is the fully-qualified name of the BackendService's
+	// CheckTaskExists RPC.
+	BackendServiceCheckTaskExistsProcedure = "/rpc.BackendService/CheckTaskExists"
 )
 
 // BackendServiceClient is a client for the rpc.BackendService service.
 type BackendServiceClient interface {
-	// Worker регистрация и управление
 	RegisterWorker(context.Context, *connect.Request[gen.RegisterWorkerRequest]) (*connect.Response[gen.RegisterWorkerResponse], error)
 	Heartbeat(context.Context, *connect.Request[gen.HeartbeatRequest]) (*connect.Response[gen.HeartbeatResponse], error)
-	// Задачи
 	GetTask(context.Context, *connect.Request[gen.GetTaskRequest]) (*connect.Response[gen.GetTaskResponse], error)
 	UpdateTaskProgress(context.Context, *connect.Request[gen.UpdateProgressRequest]) (*connect.Response[gen.UpdateProgressResponse], error)
 	CompleteTask(context.Context, *connect.Request[gen.CompleteTaskRequest]) (*connect.Response[gen.CompleteTaskResponse], error)
 	FailTask(context.Context, *connect.Request[gen.FailTaskRequest]) (*connect.Response[gen.FailTaskResponse], error)
-	// Управление задачами (для шедулера)
 	CreateTask(context.Context, *connect.Request[gen.CreateTaskRequest]) (*connect.Response[gen.CreateTaskResponse], error)
-	// Информация о серверах (для шедулера и воркера)
 	GetServers(context.Context, *connect.Request[gen.GetServersRequest]) (*connect.Response[gen.GetServersResponse], error)
 	GetServer(context.Context, *connect.Request[gen.GetServerRequest]) (*connect.Response[gen.GetServerResponse], error)
+	CheckTaskExists(context.Context, *connect.Request[gen.CheckTaskExistsRequest]) (*connect.Response[gen.CheckTaskExistsResponse], error)
 }
 
 // NewBackendServiceClient constructs a client for the rpc.BackendService service. By default, it
@@ -143,6 +142,12 @@ func NewBackendServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(backendServiceMethods.ByName("GetServer")),
 			connect.WithClientOptions(opts...),
 		),
+		checkTaskExists: connect.NewClient[gen.CheckTaskExistsRequest, gen.CheckTaskExistsResponse](
+			httpClient,
+			baseURL+BackendServiceCheckTaskExistsProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("CheckTaskExists")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -157,6 +162,7 @@ type backendServiceClient struct {
 	createTask         *connect.Client[gen.CreateTaskRequest, gen.CreateTaskResponse]
 	getServers         *connect.Client[gen.GetServersRequest, gen.GetServersResponse]
 	getServer          *connect.Client[gen.GetServerRequest, gen.GetServerResponse]
+	checkTaskExists    *connect.Client[gen.CheckTaskExistsRequest, gen.CheckTaskExistsResponse]
 }
 
 // RegisterWorker calls rpc.BackendService.RegisterWorker.
@@ -204,21 +210,23 @@ func (c *backendServiceClient) GetServer(ctx context.Context, req *connect.Reque
 	return c.getServer.CallUnary(ctx, req)
 }
 
+// CheckTaskExists calls rpc.BackendService.CheckTaskExists.
+func (c *backendServiceClient) CheckTaskExists(ctx context.Context, req *connect.Request[gen.CheckTaskExistsRequest]) (*connect.Response[gen.CheckTaskExistsResponse], error) {
+	return c.checkTaskExists.CallUnary(ctx, req)
+}
+
 // BackendServiceHandler is an implementation of the rpc.BackendService service.
 type BackendServiceHandler interface {
-	// Worker регистрация и управление
 	RegisterWorker(context.Context, *connect.Request[gen.RegisterWorkerRequest]) (*connect.Response[gen.RegisterWorkerResponse], error)
 	Heartbeat(context.Context, *connect.Request[gen.HeartbeatRequest]) (*connect.Response[gen.HeartbeatResponse], error)
-	// Задачи
 	GetTask(context.Context, *connect.Request[gen.GetTaskRequest]) (*connect.Response[gen.GetTaskResponse], error)
 	UpdateTaskProgress(context.Context, *connect.Request[gen.UpdateProgressRequest]) (*connect.Response[gen.UpdateProgressResponse], error)
 	CompleteTask(context.Context, *connect.Request[gen.CompleteTaskRequest]) (*connect.Response[gen.CompleteTaskResponse], error)
 	FailTask(context.Context, *connect.Request[gen.FailTaskRequest]) (*connect.Response[gen.FailTaskResponse], error)
-	// Управление задачами (для шедулера)
 	CreateTask(context.Context, *connect.Request[gen.CreateTaskRequest]) (*connect.Response[gen.CreateTaskResponse], error)
-	// Информация о серверах (для шедулера и воркера)
 	GetServers(context.Context, *connect.Request[gen.GetServersRequest]) (*connect.Response[gen.GetServersResponse], error)
 	GetServer(context.Context, *connect.Request[gen.GetServerRequest]) (*connect.Response[gen.GetServerResponse], error)
+	CheckTaskExists(context.Context, *connect.Request[gen.CheckTaskExistsRequest]) (*connect.Response[gen.CheckTaskExistsResponse], error)
 }
 
 // NewBackendServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -282,6 +290,12 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 		connect.WithSchema(backendServiceMethods.ByName("GetServer")),
 		connect.WithHandlerOptions(opts...),
 	)
+	backendServiceCheckTaskExistsHandler := connect.NewUnaryHandler(
+		BackendServiceCheckTaskExistsProcedure,
+		svc.CheckTaskExists,
+		connect.WithSchema(backendServiceMethods.ByName("CheckTaskExists")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/rpc.BackendService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BackendServiceRegisterWorkerProcedure:
@@ -302,6 +316,8 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 			backendServiceGetServersHandler.ServeHTTP(w, r)
 		case BackendServiceGetServerProcedure:
 			backendServiceGetServerHandler.ServeHTTP(w, r)
+		case BackendServiceCheckTaskExistsProcedure:
+			backendServiceCheckTaskExistsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -345,4 +361,8 @@ func (UnimplementedBackendServiceHandler) GetServers(context.Context, *connect.R
 
 func (UnimplementedBackendServiceHandler) GetServer(context.Context, *connect.Request[gen.GetServerRequest]) (*connect.Response[gen.GetServerResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.GetServer is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) CheckTaskExists(context.Context, *connect.Request[gen.CheckTaskExistsRequest]) (*connect.Response[gen.CheckTaskExistsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.CheckTaskExists is not implemented"))
 }

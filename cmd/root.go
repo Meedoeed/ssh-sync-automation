@@ -46,7 +46,6 @@ func init() {
 
 func runMonolith(cmd *cobra.Command, args []string) {
 	if err := godotenv.Load(); err != nil {
-		// Используем временный логгер до инициализации
 		println("No .env file found")
 	}
 

@@ -59,7 +59,6 @@ func runBackend(cmd *cobra.Command, args []string) {
 	taskService := service.NewTaskService(taskRepo)
 	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")
 
-	// Запуск RPC сервера для воркеров
 	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo)
 	rpcPath, rpcHandler := genconnect.NewBackendServiceHandler(rpcServer)
 
@@ -73,8 +72,9 @@ func runBackend(cmd *cobra.Command, args []string) {
 		}
 	}()
 
+	go rpcServer.StartHeartbeatMonitor(context.Background())
+
 	healthHandler := handler.NewHealthHandler(db)
-	// Временно передаём nil вместо workerPool (позже будет RPC клиент)
 	serverHandler := handler.NewServerHandler(serverService, nil)
 	taskHandler := handler.NewTaskHandler(taskService)
 

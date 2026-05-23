@@ -1,4 +1,3 @@
-// internal/service/task_service.go
 package service
 
 import (
@@ -134,6 +133,7 @@ func (s *TaskService) CompleteTask(ctx context.Context, id uuid.UUID) error {
 	task.Status = domain.StatusCompleted
 	task.CompletedAt = &now
 	task.ErrorMessage = nil
+	task.WorkerID = nil // Очищаем ID воркера при завершении
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
 		return fmt.Errorf("failed to complete task: %w", err)
@@ -163,6 +163,7 @@ func (s *TaskService) FailTask(ctx context.Context, id uuid.UUID, errMsg string)
 		task.Status = domain.StatusFailed
 		task.CompletedAt = &now
 		task.ErrorMessage = &errMsg
+		task.WorkerID = nil // Очищаем ID воркера при окончательном провале
 
 		logger.Get().Warn().
 			Str("task_id", id.String()).
@@ -173,6 +174,7 @@ func (s *TaskService) FailTask(ctx context.Context, id uuid.UUID, errMsg string)
 	} else {
 		task.Status = domain.StatusPending
 		task.ErrorMessage = &errMsg
+		task.WorkerID = nil // Очищаем ID воркера для перевыполнения
 
 		logger.Get().Info().
 			Str("task_id", id.String()).
@@ -204,6 +206,7 @@ func (s *TaskService) CancelTask(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	task.Status = domain.StatusCancelled
 	task.CompletedAt = &now
+	task.WorkerID = nil // Очищаем ID воркера при отмене
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
 		return fmt.Errorf("failed to cancel task: %w", err)
@@ -262,4 +265,31 @@ func (s *TaskService) GetAllTasks(ctx context.Context, limit int) ([]*domain.Syn
 	}
 
 	return tasks, nil
+}
+
+// ReassignWorkerTasks переводит все задачи указанного воркера обратно в статус pending
+func (s *TaskService) ReassignWorkerTasks(ctx context.Context, workerID string) (int, error) {
+	tasks, err := s.taskRepo.GetTasksByWorker(ctx, workerID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get tasks by worker: %w", err)
+	}
+
+	reassignedCount := 0
+	for _, task := range tasks {
+		if err := s.taskRepo.ReassignTask(ctx, task.ID); err != nil {
+			logger.Get().Error().
+				Err(err).
+				Str("task_id", task.ID.String()).
+				Str("worker_id", workerID).
+				Msg("Failed to reassign task")
+			continue
+		}
+		reassignedCount++
+		logger.Get().Info().
+			Str("task_id", task.ID.String()).
+			Str("worker_id", workerID).
+			Msg("Task reassigned from dead worker")
+	}
+
+	return reassignedCount, nil
 }

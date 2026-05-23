@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -65,13 +67,11 @@ func runWorker(cmd *cobra.Command, args []string) {
 		Str("backend_addr", backendAddr).
 		Msg("Worker starting")
 
-	// Создаём RPC клиент
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 	}
 	rpcClient := genconnect.NewBackendServiceClient(httpClient, backendAddr)
 
-	// Регистрируемся в бэкенде
 	ctx := context.Background()
 	registerResp, err := rpcClient.RegisterWorker(ctx, connect.NewRequest(&gen.RegisterWorkerRequest{
 		WorkerId: workerID,
@@ -81,15 +81,12 @@ func runWorker(cmd *cobra.Command, args []string) {
 	}
 	log.Info().Bool("success", registerResp.Msg.Success).Str("message", registerResp.Msg.Message).Msg("Worker registered")
 
-	// Запускаем heartbeat горутину
 	heartbeatCtx, heartbeatCancel := context.WithCancel(ctx)
 	go sendHeartbeat(heartbeatCtx, rpcClient, workerID)
 
-	// Запускаем основной цикл получения и выполнения задач
 	taskCtx, taskCancel := context.WithCancel(ctx)
 	go taskLoop(taskCtx, rpcClient, workerID, cfg)
 
-	// Ожидание сигнала завершения
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -128,7 +125,6 @@ func taskLoop(ctx context.Context, client genconnect.BackendServiceClient, worke
 		default:
 		}
 
-		// Запрашиваем задачу
 		resp, err := client.GetTask(ctx, connect.NewRequest(&gen.GetTaskRequest{
 			WorkerId: workerID,
 		}))
@@ -139,7 +135,6 @@ func taskLoop(ctx context.Context, client genconnect.BackendServiceClient, worke
 		}
 
 		if !resp.Msg.HasTask {
-			// Нет задач, ждём
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -151,7 +146,6 @@ func taskLoop(ctx context.Context, client genconnect.BackendServiceClient, worke
 			Str("direction", task.Direction).
 			Msg("Task received, starting execution")
 
-		// Выполняем задачу
 		err = executeTask(ctx, task, workerID, client, cfg)
 		if err != nil {
 			logger.Get().Error().Err(err).Str("task_id", task.Id).Msg("Task execution failed")
@@ -179,7 +173,6 @@ func taskLoop(ctx context.Context, client genconnect.BackendServiceClient, worke
 func executeTask(ctx context.Context, task *gen.Task, workerID string, client genconnect.BackendServiceClient, cfg *config.Config) error {
 	log := logger.Get()
 
-	// 1. Получаем данные сервера через RPC
 	serverResp, err := client.GetServer(ctx, connect.NewRequest(&gen.GetServerRequest{
 		ServerId: task.ServerId,
 	}))
@@ -198,10 +191,8 @@ func executeTask(ctx context.Context, task *gen.Task, workerID string, client ge
 		Str("server_host", server.Host).
 		Msg("Got server info")
 
-	// 2. Создаём SSH клиент
 	sshClient := infrastructure.NewSSHClient(&cfg.Sync)
 
-	// Конвертируем proto Server в domain.Server
 	serverID, err := uuid.Parse(server.Id)
 	if err != nil {
 		return fmt.Errorf("invalid server ID: %w", err)
@@ -223,7 +214,6 @@ func executeTask(ctx context.Context, task *gen.Task, workerID string, client ge
 		domainServer.PrivateKey = &server.PrivateKey
 	}
 
-	// 3. Подключаемся
 	if err := sshClient.Connect(domainServer); err != nil {
 		return fmt.Errorf("failed to connect to server %s: %w", server.Name, err)
 	}
@@ -234,11 +224,22 @@ func executeTask(ctx context.Context, task *gen.Task, workerID string, client ge
 		Str("server", server.Name).
 		Msg("Connected to server")
 
-	// 4. Выполняем задачу в зависимости от направления
 	if task.Direction == "download" {
-		// Скачивание файла
-		err = sshClient.DownloadWithRetryProgress(task.RemotePath, task.LocalPath, func(downloaded, total int64) {
-			// Обновляем прогресс через RPC
+		remotePath := strings.ReplaceAll(task.RemotePath, "\\", "/")
+		localPath := task.LocalPath
+
+		localDir := filepath.Dir(localPath)
+		if err := os.MkdirAll(localDir, 0755); err != nil {
+			return fmt.Errorf("failed to create local directory %s: %w", localDir, err)
+		}
+
+		log.Info().
+			Str("task_id", task.Id).
+			Str("remote_path", remotePath).
+			Str("local_path", localPath).
+			Msg("Downloading file")
+
+		err = sshClient.DownloadWithRetryProgress(remotePath, localPath, func(downloaded, total int64) {
 			_, updateErr := client.UpdateTaskProgress(ctx, connect.NewRequest(&gen.UpdateProgressRequest{
 				TaskId:           task.Id,
 				WorkerId:         workerID,
@@ -253,8 +254,7 @@ func executeTask(ctx context.Context, task *gen.Task, workerID string, client ge
 			return fmt.Errorf("download failed: %w", err)
 		}
 
-		// Удаляем файл на сервере после успешного скачивания
-		if err := sshClient.DeleteFile(task.RemotePath); err != nil {
+		if err := sshClient.DeleteFile(remotePath); err != nil {
 			log.Warn().Err(err).Msg("Failed to delete remote file after download")
 		}
 
@@ -264,9 +264,20 @@ func executeTask(ctx context.Context, task *gen.Task, workerID string, client ge
 			Msg("File downloaded successfully")
 
 	} else if task.Direction == "upload" {
-		// Загрузка файла
-		err = sshClient.UploadWithRetryProgress(task.LocalPath, task.RemotePath, func(uploaded, total int64) {
-			// Обновляем прогресс через RPC
+		remotePath := strings.ReplaceAll(task.RemotePath, "\\", "/")
+		localPath := task.LocalPath
+
+		if _, err := os.Stat(localPath); os.IsNotExist(err) {
+			return fmt.Errorf("local file not found: %s", localPath)
+		}
+
+		log.Info().
+			Str("task_id", task.Id).
+			Str("local_path", localPath).
+			Str("remote_path", remotePath).
+			Msg("Uploading file")
+
+		err = sshClient.UploadWithRetryProgress(localPath, remotePath, func(uploaded, total int64) {
 			_, updateErr := client.UpdateTaskProgress(ctx, connect.NewRequest(&gen.UpdateProgressRequest{
 				TaskId:           task.Id,
 				WorkerId:         workerID,
@@ -281,8 +292,7 @@ func executeTask(ctx context.Context, task *gen.Task, workerID string, client ge
 			return fmt.Errorf("upload failed: %w", err)
 		}
 
-		// Удаляем локальный файл после успешной загрузки
-		if err := os.Remove(task.LocalPath); err != nil {
+		if err := os.Remove(localPath); err != nil {
 			log.Warn().Err(err).Msg("Failed to delete local file after upload")
 		}
 

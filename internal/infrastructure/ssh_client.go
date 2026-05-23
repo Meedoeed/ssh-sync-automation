@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -573,7 +576,10 @@ func (c *SSHClient) DownloadWithProgress(remotePath, localPath string, progressC
 		return fmt.Errorf("not connected")
 	}
 
-	partPath := localPath + ".part"
+	// Создаём директорию для локального файла
+	if err := ensureLocalDir(localPath); err != nil {
+		return err
+	}
 
 	remoteFile, err := c.sftpClient.Open(remotePath)
 	if err != nil {
@@ -586,6 +592,34 @@ func (c *SSHClient) DownloadWithProgress(remotePath, localPath string, progressC
 		return fmt.Errorf("failed to stat remote file: %w", err)
 	}
 	totalSize := remoteInfo.Size()
+
+	// Генерируем уникальное локальное имя, если файл уже существует
+	finalLocalPath := getUniqueLocalPath(localPath)
+
+	// Пустой файл (0 байт) - просто создаём локально
+	if totalSize == 0 {
+		logger.Get().Debug().
+			Str("file", remotePath).
+			Msg("Empty file detected, creating empty local file")
+
+		emptyFile, err := os.Create(finalLocalPath)
+		if err != nil {
+			return fmt.Errorf("failed to create empty local file: %w", err)
+		}
+		emptyFile.Close()
+
+		if progressCallback != nil {
+			progressCallback(0, 0)
+		}
+
+		logger.Get().Debug().
+			Str("file", remotePath).
+			Str("saved_as", filepath.Base(finalLocalPath)).
+			Msg("Empty file downloaded successfully")
+		return nil
+	}
+
+	partPath := finalLocalPath + ".part"
 
 	var offset int64 = 0
 	if info, err := os.Stat(partPath); err == nil {
@@ -600,8 +634,10 @@ func (c *SSHClient) DownloadWithProgress(remotePath, localPath string, progressC
 				Int64("remote_size", totalSize).
 				Msg("Part file larger than remote, restarting download")
 			offset = 0
+			os.Remove(partPath)
 		} else {
-			return os.Rename(partPath, localPath)
+			// Файл уже полностью скачан
+			return os.Rename(partPath, finalLocalPath)
 		}
 	}
 
@@ -652,13 +688,20 @@ func (c *SSHClient) DownloadWithProgress(remotePath, localPath string, progressC
 		}
 	}
 
-	if err := os.Rename(partPath, localPath); err != nil {
+	localFile.Close()
+
+	if err := os.Rename(partPath, finalLocalPath); err != nil {
 		return fmt.Errorf("failed to rename part file: %w", err)
 	}
 
 	if progressCallback != nil {
 		progressCallback(totalSize, totalSize)
 	}
+
+	logger.Get().Info().
+		Str("file", remotePath).
+		Str("saved_as", filepath.Base(finalLocalPath)).
+		Msg("File downloaded successfully")
 
 	return nil
 }
@@ -668,19 +711,49 @@ func (c *SSHClient) UploadWithProgress(localPath, remotePath string, progressCal
 		return fmt.Errorf("not connected")
 	}
 
-	remotePartPath := remotePath + ".part"
+	// Проверяем существование локального файла
+	localInfo, err := os.Stat(localPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file does not exist: %s", localPath)
+		}
+		return fmt.Errorf("failed to stat local file: %w", err)
+	}
+	totalSize := localInfo.Size()
+
+	// Генерируем уникальное удалённое имя, если файл уже существует
+	finalRemotePath := getUniqueRemotePath(c.sftpClient, remotePath)
+
+	// Пустой файл (0 байт) - просто создаём на сервере
+	if totalSize == 0 {
+		logger.Get().Debug().
+			Str("file", localPath).
+			Msg("Empty file detected, creating empty file on server")
+
+		remoteFile, err := c.sftpClient.Create(finalRemotePath)
+		if err != nil {
+			return fmt.Errorf("failed to create empty remote file: %w", err)
+		}
+		remoteFile.Close()
+
+		if progressCallback != nil {
+			progressCallback(0, 0)
+		}
+
+		logger.Get().Info().
+			Str("file", localPath).
+			Str("uploaded_as", filepath.Base(finalRemotePath)).
+			Msg("Empty file uploaded successfully")
+		return nil
+	}
+
+	remotePartPath := finalRemotePath + ".part"
 
 	localFile, err := os.Open(localPath)
 	if err != nil {
 		return fmt.Errorf("failed to open local file: %w", err)
 	}
 	defer localFile.Close()
-
-	localInfo, err := localFile.Stat()
-	if err != nil {
-		return fmt.Errorf("failed to stat local file: %w", err)
-	}
-	totalSize := localInfo.Size()
 
 	var offset int64 = 0
 	if info, err := c.sftpClient.Stat(remotePartPath); err == nil {
@@ -698,9 +771,11 @@ func (c *SSHClient) UploadWithProgress(localPath, remotePath string, progressCal
 				Int64("part_size", offset).
 				Int64("local_size", totalSize).
 				Msg("Part file larger than local, restarting upload")
+			c.sftpClient.Remove(remotePartPath)
 			offset = 0
 		} else {
-			return c.sftpClient.Rename(remotePartPath, remotePath)
+			// Файл уже полностью загружен
+			return c.sftpClient.Rename(remotePartPath, finalRemotePath)
 		}
 	}
 
@@ -751,18 +826,19 @@ func (c *SSHClient) UploadWithProgress(localPath, remotePath string, progressCal
 		}
 	}
 
-	if err := c.sftpClient.Rename(remotePartPath, remotePath); err != nil {
+	remoteFile.Close()
+
+	if err := c.sftpClient.Rename(remotePartPath, finalRemotePath); err != nil {
 		return fmt.Errorf("failed to rename remote part file: %w", err)
 	}
 
-	// Финальный прогресс
 	if progressCallback != nil {
 		progressCallback(totalSize, totalSize)
 	}
 
-	logger.Get().Debug().
+	logger.Get().Info().
 		Str("file", localPath).
-		Int64("total", totalSize).
+		Str("uploaded_as", filepath.Base(finalRemotePath)).
 		Msg("Upload completed successfully")
 
 	return nil
@@ -787,4 +863,68 @@ func (c *SSHClient) UploadWithRetryProgress(localPath, remotePath string, progre
 		lastErr = err
 	}
 	return fmt.Errorf("upload failed after %d attempts: %w", c.config.RetryMaxAtmpt, lastErr)
+}
+
+func ensureLocalDir(localPath string) error {
+	dir := localPath
+	if idx := strings.LastIndex(localPath, "/"); idx != -1 {
+		dir = localPath[:idx]
+	} else if idx := strings.LastIndex(localPath, "\\"); idx != -1 {
+		dir = localPath[:idx]
+	}
+
+	if dir != localPath {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+	return nil
+}
+
+func getUniqueLocalPath(originalPath string) string {
+	if _, err := os.Stat(originalPath); os.IsNotExist(err) {
+		return originalPath
+	}
+
+	dir := filepath.Dir(originalPath)
+	ext := filepath.Ext(originalPath)
+	name := strings.TrimSuffix(filepath.Base(originalPath), ext)
+
+	for i := 1; i <= 1000; i++ {
+		newName := fmt.Sprintf("%s (%d)%s", name, i, ext)
+		newPath := filepath.Join(dir, newName)
+		if _, err := os.Stat(newPath); os.IsNotExist(err) {
+			logger.Get().Debug().
+				Str("original", originalPath).
+				Str("new", newPath).
+				Msg("Local file already exists, using new name")
+			return newPath
+		}
+	}
+
+	return originalPath
+}
+
+func getUniqueRemotePath(sftpClient *sftp.Client, originalPath string) string {
+	if _, err := sftpClient.Stat(originalPath); err != nil {
+		return originalPath
+	}
+
+	dir := path.Dir(originalPath)
+	ext := path.Ext(originalPath)
+	name := strings.TrimSuffix(path.Base(originalPath), ext)
+
+	for i := 1; i <= 1000; i++ {
+		newName := fmt.Sprintf("%s (%d)%s", name, i, ext)
+		newPath := path.Join(dir, newName)
+		if _, err := sftpClient.Stat(newPath); err != nil {
+			logger.Get().Debug().
+				Str("original", originalPath).
+				Str("new", newPath).
+				Msg("Remote file already exists, using new name")
+			return newPath
+		}
+	}
+
+	return originalPath
 }

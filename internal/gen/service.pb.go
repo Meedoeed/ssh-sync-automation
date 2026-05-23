@@ -7,12 +7,11 @@
 package gen
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -22,7 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Worker регистрация
 type RegisterWorkerRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkerId      string                 `protobuf:"bytes,1,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
@@ -119,7 +117,6 @@ func (x *RegisterWorkerResponse) GetMessage() string {
 	return ""
 }
 
-// Heartbeat
 type HeartbeatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkerId      string                 `protobuf:"bytes,1,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
@@ -208,7 +205,6 @@ func (x *HeartbeatResponse) GetSuccess() bool {
 	return false
 }
 
-// Получение задачи
 type GetTaskRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkerId      string                 `protobuf:"bytes,1,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
@@ -305,7 +301,6 @@ func (x *GetTaskResponse) GetTask() *Task {
 	return nil
 }
 
-// Задача
 type Task struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -398,7 +393,6 @@ func (x *Task) GetFileSize() int64 {
 	return 0
 }
 
-// Обновление прогресса
 type UpdateProgressRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	TaskId           string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
@@ -503,7 +497,6 @@ func (x *UpdateProgressResponse) GetSuccess() bool {
 	return false
 }
 
-// Успешное завершение задачи
 type CompleteTaskRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
@@ -600,7 +593,6 @@ func (x *CompleteTaskResponse) GetSuccess() bool {
 	return false
 }
 
-// Завершение задачи с ошибкой
 type FailTaskRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
@@ -705,7 +697,6 @@ func (x *FailTaskResponse) GetSuccess() bool {
 	return false
 }
 
-// Создание задачи (шедулером)
 type CreateTaskRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -850,7 +841,6 @@ func (x *CreateTaskResponse) GetError() string {
 	return ""
 }
 
-// Получение списка серверов
 type GetServersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ActiveOnly    bool                   `protobuf:"varint,1,opt,name=active_only,json=activeOnly,proto3" json:"active_only,omitempty"`
@@ -939,7 +929,6 @@ func (x *GetServersResponse) GetServers() []*Server {
 	return nil
 }
 
-// Получение одного сервера
 type GetServerRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -1028,7 +1017,6 @@ func (x *GetServerResponse) GetServer() *Server {
 	return nil
 }
 
-// Сервер (передаём все данные для SSH подключения)
 type Server struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1137,6 +1125,110 @@ func (x *Server) GetIsActive() bool {
 	return false
 }
 
+type CheckTaskExistsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	Direction     string                 `protobuf:"bytes,2,opt,name=direction,proto3" json:"direction,omitempty"`
+	RemotePath    string                 `protobuf:"bytes,3,opt,name=remote_path,json=remotePath,proto3" json:"remote_path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckTaskExistsRequest) Reset() {
+	*x = CheckTaskExistsRequest{}
+	mi := &file_proto_service_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckTaskExistsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckTaskExistsRequest) ProtoMessage() {}
+
+func (x *CheckTaskExistsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckTaskExistsRequest.ProtoReflect.Descriptor instead.
+func (*CheckTaskExistsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CheckTaskExistsRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *CheckTaskExistsRequest) GetDirection() string {
+	if x != nil {
+		return x.Direction
+	}
+	return ""
+}
+
+func (x *CheckTaskExistsRequest) GetRemotePath() string {
+	if x != nil {
+		return x.RemotePath
+	}
+	return ""
+}
+
+type CheckTaskExistsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Exists        bool                   `protobuf:"varint,1,opt,name=exists,proto3" json:"exists,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckTaskExistsResponse) Reset() {
+	*x = CheckTaskExistsResponse{}
+	mi := &file_proto_service_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckTaskExistsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckTaskExistsResponse) ProtoMessage() {}
+
+func (x *CheckTaskExistsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckTaskExistsResponse.ProtoReflect.Descriptor instead.
+func (*CheckTaskExistsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CheckTaskExistsResponse) GetExists() bool {
+	if x != nil {
+		return x.Exists
+	}
+	return false
+}
+
 var File_proto_service_proto protoreflect.FileDescriptor
 
 const file_proto_service_proto_rawDesc = "" +
@@ -1215,7 +1307,14 @@ const file_proto_service_proto_rawDesc = "" +
 	"\bpassword\x18\a \x01(\tR\bpassword\x12\x1f\n" +
 	"\vprivate_key\x18\b \x01(\tR\n" +
 	"privateKey\x12\x1b\n" +
-	"\tis_active\x18\t \x01(\bR\bisActive2\xd4\x04\n" +
+	"\tis_active\x18\t \x01(\bR\bisActive\"t\n" +
+	"\x16CheckTaskExistsRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x1c\n" +
+	"\tdirection\x18\x02 \x01(\tR\tdirection\x12\x1f\n" +
+	"\vremote_path\x18\x03 \x01(\tR\n" +
+	"remotePath\"1\n" +
+	"\x17CheckTaskExistsResponse\x12\x16\n" +
+	"\x06exists\x18\x01 \x01(\bR\x06exists2\xa2\x05\n" +
 	"\x0eBackendService\x12I\n" +
 	"\x0eRegisterWorker\x12\x1a.rpc.RegisterWorkerRequest\x1a\x1b.rpc.RegisterWorkerResponse\x12:\n" +
 	"\tHeartbeat\x12\x15.rpc.HeartbeatRequest\x1a\x16.rpc.HeartbeatResponse\x124\n" +
@@ -1227,7 +1326,8 @@ const file_proto_service_proto_rawDesc = "" +
 	"CreateTask\x12\x16.rpc.CreateTaskRequest\x1a\x17.rpc.CreateTaskResponse\x12=\n" +
 	"\n" +
 	"GetServers\x12\x16.rpc.GetServersRequest\x1a\x17.rpc.GetServersResponse\x12:\n" +
-	"\tGetServer\x12\x15.rpc.GetServerRequest\x1a\x16.rpc.GetServerResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
+	"\tGetServer\x12\x15.rpc.GetServerRequest\x1a\x16.rpc.GetServerResponse\x12L\n" +
+	"\x0fCheckTaskExists\x12\x1b.rpc.CheckTaskExistsRequest\x1a\x1c.rpc.CheckTaskExistsResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
 
 var (
 	file_proto_service_proto_rawDescOnce sync.Once
@@ -1241,28 +1341,30 @@ func file_proto_service_proto_rawDescGZIP() []byte {
 	return file_proto_service_proto_rawDescData
 }
 
-var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_proto_service_proto_goTypes = []any{
-	(*RegisterWorkerRequest)(nil),  // 0: rpc.RegisterWorkerRequest
-	(*RegisterWorkerResponse)(nil), // 1: rpc.RegisterWorkerResponse
-	(*HeartbeatRequest)(nil),       // 2: rpc.HeartbeatRequest
-	(*HeartbeatResponse)(nil),      // 3: rpc.HeartbeatResponse
-	(*GetTaskRequest)(nil),         // 4: rpc.GetTaskRequest
-	(*GetTaskResponse)(nil),        // 5: rpc.GetTaskResponse
-	(*Task)(nil),                   // 6: rpc.Task
-	(*UpdateProgressRequest)(nil),  // 7: rpc.UpdateProgressRequest
-	(*UpdateProgressResponse)(nil), // 8: rpc.UpdateProgressResponse
-	(*CompleteTaskRequest)(nil),    // 9: rpc.CompleteTaskRequest
-	(*CompleteTaskResponse)(nil),   // 10: rpc.CompleteTaskResponse
-	(*FailTaskRequest)(nil),        // 11: rpc.FailTaskRequest
-	(*FailTaskResponse)(nil),       // 12: rpc.FailTaskResponse
-	(*CreateTaskRequest)(nil),      // 13: rpc.CreateTaskRequest
-	(*CreateTaskResponse)(nil),     // 14: rpc.CreateTaskResponse
-	(*GetServersRequest)(nil),      // 15: rpc.GetServersRequest
-	(*GetServersResponse)(nil),     // 16: rpc.GetServersResponse
-	(*GetServerRequest)(nil),       // 17: rpc.GetServerRequest
-	(*GetServerResponse)(nil),      // 18: rpc.GetServerResponse
-	(*Server)(nil),                 // 19: rpc.Server
+	(*RegisterWorkerRequest)(nil),   // 0: rpc.RegisterWorkerRequest
+	(*RegisterWorkerResponse)(nil),  // 1: rpc.RegisterWorkerResponse
+	(*HeartbeatRequest)(nil),        // 2: rpc.HeartbeatRequest
+	(*HeartbeatResponse)(nil),       // 3: rpc.HeartbeatResponse
+	(*GetTaskRequest)(nil),          // 4: rpc.GetTaskRequest
+	(*GetTaskResponse)(nil),         // 5: rpc.GetTaskResponse
+	(*Task)(nil),                    // 6: rpc.Task
+	(*UpdateProgressRequest)(nil),   // 7: rpc.UpdateProgressRequest
+	(*UpdateProgressResponse)(nil),  // 8: rpc.UpdateProgressResponse
+	(*CompleteTaskRequest)(nil),     // 9: rpc.CompleteTaskRequest
+	(*CompleteTaskResponse)(nil),    // 10: rpc.CompleteTaskResponse
+	(*FailTaskRequest)(nil),         // 11: rpc.FailTaskRequest
+	(*FailTaskResponse)(nil),        // 12: rpc.FailTaskResponse
+	(*CreateTaskRequest)(nil),       // 13: rpc.CreateTaskRequest
+	(*CreateTaskResponse)(nil),      // 14: rpc.CreateTaskResponse
+	(*GetServersRequest)(nil),       // 15: rpc.GetServersRequest
+	(*GetServersResponse)(nil),      // 16: rpc.GetServersResponse
+	(*GetServerRequest)(nil),        // 17: rpc.GetServerRequest
+	(*GetServerResponse)(nil),       // 18: rpc.GetServerResponse
+	(*Server)(nil),                  // 19: rpc.Server
+	(*CheckTaskExistsRequest)(nil),  // 20: rpc.CheckTaskExistsRequest
+	(*CheckTaskExistsResponse)(nil), // 21: rpc.CheckTaskExistsResponse
 }
 var file_proto_service_proto_depIdxs = []int32{
 	6,  // 0: rpc.GetTaskResponse.task:type_name -> rpc.Task
@@ -1277,17 +1379,19 @@ var file_proto_service_proto_depIdxs = []int32{
 	13, // 9: rpc.BackendService.CreateTask:input_type -> rpc.CreateTaskRequest
 	15, // 10: rpc.BackendService.GetServers:input_type -> rpc.GetServersRequest
 	17, // 11: rpc.BackendService.GetServer:input_type -> rpc.GetServerRequest
-	1,  // 12: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
-	3,  // 13: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
-	5,  // 14: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
-	8,  // 15: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
-	10, // 16: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
-	12, // 17: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
-	14, // 18: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
-	16, // 19: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
-	18, // 20: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
-	12, // [12:21] is the sub-list for method output_type
-	3,  // [3:12] is the sub-list for method input_type
+	20, // 12: rpc.BackendService.CheckTaskExists:input_type -> rpc.CheckTaskExistsRequest
+	1,  // 13: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
+	3,  // 14: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
+	5,  // 15: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
+	8,  // 16: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
+	10, // 17: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
+	12, // 18: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
+	14, // 19: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
+	16, // 20: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
+	18, // 21: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
+	21, // 22: rpc.BackendService.CheckTaskExists:output_type -> rpc.CheckTaskExistsResponse
+	13, // [13:23] is the sub-list for method output_type
+	3,  // [3:13] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -1304,7 +1408,7 @@ func file_proto_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_service_proto_rawDesc), len(file_proto_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

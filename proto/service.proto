@@ -5,25 +5,22 @@ package rpc;
 option go_package = "github.com/Meedoeed/ssh-sync-automation/internal/gen";
 
 service BackendService {
-  // Worker регистрация и управление
   rpc RegisterWorker(RegisterWorkerRequest) returns (RegisterWorkerResponse);
   rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
   
-  // Задачи
   rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
   rpc UpdateTaskProgress(UpdateProgressRequest) returns (UpdateProgressResponse);
   rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse);
   rpc FailTask(FailTaskRequest) returns (FailTaskResponse);
   
-  // Управление задачами (для шедулера)
   rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
   
-  // Информация о серверах (для шедулера и воркера)
   rpc GetServers(GetServersRequest) returns (GetServersResponse);
   rpc GetServer(GetServerRequest) returns (GetServerResponse);
+
+  rpc CheckTaskExists(CheckTaskExistsRequest) returns (CheckTaskExistsResponse);
 }
 
-// Worker регистрация
 message RegisterWorkerRequest {
   string worker_id = 1;
 }
@@ -33,7 +30,6 @@ message RegisterWorkerResponse {
   string message = 2;
 }
 
-// Heartbeat
 message HeartbeatRequest {
   string worker_id = 1;
 }
@@ -42,7 +38,6 @@ message HeartbeatResponse {
   bool success = 1;
 }
 
-// Получение задачи
 message GetTaskRequest {
   string worker_id = 1;
 }
@@ -52,7 +47,6 @@ message GetTaskResponse {
   Task task = 2;
 }
 
-// Задача
 message Task {
   string id = 1;
   string server_id = 2;
@@ -63,7 +57,6 @@ message Task {
   int64 file_size = 7;
 }
 
-// Обновление прогресса
 message UpdateProgressRequest {
   string task_id = 1;
   string worker_id = 2;
@@ -74,7 +67,6 @@ message UpdateProgressResponse {
   bool success = 1;
 }
 
-// Успешное завершение задачи
 message CompleteTaskRequest {
   string task_id = 1;
   string worker_id = 2;
@@ -84,7 +76,6 @@ message CompleteTaskResponse {
   bool success = 1;
 }
 
-// Завершение задачи с ошибкой
 message FailTaskRequest {
   string task_id = 1;
   string worker_id = 2;
@@ -95,7 +86,6 @@ message FailTaskResponse {
   bool success = 1;
 }
 
-// Создание задачи (шедулером)
 message CreateTaskRequest {
   string server_id = 1;
   string direction = 2;
@@ -111,7 +101,6 @@ message CreateTaskResponse {
   string error = 3;
 }
 
-// Получение списка серверов
 message GetServersRequest {
   bool active_only = 1;
 }
@@ -120,7 +109,6 @@ message GetServersResponse {
   repeated Server servers = 1;
 }
 
-// Получение одного сервера
 message GetServerRequest {
   string server_id = 1;
 }
@@ -129,7 +117,6 @@ message GetServerResponse {
   Server server = 1;
 }
 
-// Сервер (передаём все данные для SSH подключения)
 message Server {
   string id = 1;
   string name = 2;
@@ -140,4 +127,14 @@ message Server {
   string password = 7;       // опционально (если auth_type password)
   string private_key = 8;    // опционально (если auth_type key)
   bool is_active = 9;
+}
+
+message CheckTaskExistsRequest {
+  string server_id = 1;
+  string direction = 2;
+  string remote_path = 3;
+}
+
+message CheckTaskExistsResponse {
+  bool exists = 1;
 }

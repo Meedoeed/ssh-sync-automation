@@ -26,6 +26,7 @@ const (
 type SyncTask struct {
 	ID               uuid.UUID
 	ServerID         uuid.UUID
+	WorkerID         *string
 	Direction        SyncDirection
 	FileName         string
 	RemotePath       string

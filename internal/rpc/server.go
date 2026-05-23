@@ -14,14 +14,16 @@ import (
 )
 
 type BackendServer struct {
-	taskRepo   repository.TaskRepository
-	serverRepo repository.ServerRepository
+	taskRepo       repository.TaskRepository
+	serverRepo     repository.ServerRepository
+	workerRegistry *WorkerRegistry
 }
 
 func NewBackendServer(taskRepo repository.TaskRepository, serverRepo repository.ServerRepository) *BackendServer {
 	return &BackendServer{
-		taskRepo:   taskRepo,
-		serverRepo: serverRepo,
+		taskRepo:       taskRepo,
+		serverRepo:     serverRepo,
+		workerRegistry: NewWorkerRegistry(),
 	}
 }
 
@@ -30,6 +32,8 @@ func (s *BackendServer) RegisterWorker(ctx context.Context, req *connect.Request
 		Str("worker_id", req.Msg.WorkerId).
 		Msg("Worker registered")
 
+	s.workerRegistry.Register(req.Msg.WorkerId)
+
 	return connect.NewResponse(&gen.RegisterWorkerResponse{
 		Success: true,
 		Message: "Worker registered successfully",
@@ -37,6 +41,8 @@ func (s *BackendServer) RegisterWorker(ctx context.Context, req *connect.Request
 }
 
 func (s *BackendServer) Heartbeat(ctx context.Context, req *connect.Request[gen.HeartbeatRequest]) (*connect.Response[gen.HeartbeatResponse], error) {
+	s.workerRegistry.Heartbeat(req.Msg.WorkerId)
+
 	logger.Get().Debug().
 		Str("worker_id", req.Msg.WorkerId).
 		Msg("Heartbeat received")
@@ -47,7 +53,8 @@ func (s *BackendServer) Heartbeat(ctx context.Context, req *connect.Request[gen.
 }
 
 func (s *BackendServer) GetTask(ctx context.Context, req *connect.Request[gen.GetTaskRequest]) (*connect.Response[gen.GetTaskResponse], error) {
-	// Находим задачу со статусом pending
+	s.workerRegistry.Heartbeat(req.Msg.WorkerId)
+
 	tasks, err := s.taskRepo.ListPending(ctx, 1)
 	if err != nil {
 		logger.Get().Error().Err(err).Msg("Failed to get pending tasks")
@@ -64,10 +71,10 @@ func (s *BackendServer) GetTask(ctx context.Context, req *connect.Request[gen.Ge
 
 	task := tasks[0]
 
-	// Резервируем задачу за воркером
 	now := time.Now()
 	task.Status = domain.StatusProcessing
 	task.StartedAt = &now
+	task.WorkerID = &req.Msg.WorkerId
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
 		logger.Get().Error().Err(err).Str("task_id", task.ID.String()).Msg("Failed to reserve task")
@@ -76,7 +83,6 @@ func (s *BackendServer) GetTask(ctx context.Context, req *connect.Request[gen.Ge
 		}), nil
 	}
 
-	// Получаем информацию о сервере для логирования
 	server, err := s.serverRepo.GetByID(ctx, task.ServerID)
 	if err != nil {
 		logger.Get().Error().Err(err).Str("server_id", task.ServerID.String()).Msg("Failed to get server info")
@@ -262,7 +268,6 @@ func (s *BackendServer) CreateTask(ctx context.Context, req *connect.Request[gen
 	}), nil
 }
 
-// GetServer возвращает информацию о сервере по ID
 func (s *BackendServer) GetServer(ctx context.Context, req *connect.Request[gen.GetServerRequest]) (*connect.Response[gen.GetServerResponse], error) {
 	serverID, err := uuid.Parse(req.Msg.ServerId)
 	if err != nil {
@@ -306,7 +311,6 @@ func (s *BackendServer) GetServer(ctx context.Context, req *connect.Request[gen.
 	}), nil
 }
 
-// GetServers возвращает список всех серверов
 func (s *BackendServer) GetServers(ctx context.Context, req *connect.Request[gen.GetServersRequest]) (*connect.Response[gen.GetServersResponse], error) {
 	servers, err := s.serverRepo.List(ctx, req.Msg.ActiveOnly)
 	if err != nil {
@@ -340,5 +344,83 @@ func (s *BackendServer) GetServers(ctx context.Context, req *connect.Request[gen
 
 	return connect.NewResponse(&gen.GetServersResponse{
 		Servers: result,
+	}), nil
+}
+
+func (s *BackendServer) StartHeartbeatMonitor(ctx context.Context) {
+	ticker := time.NewTicker(15 * time.Second)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Get().Debug().Msg("Heartbeat monitor stopped")
+				return
+			case <-ticker.C:
+				s.reassignDeadWorkersTasks(ctx)
+			}
+		}
+	}()
+}
+
+func (s *BackendServer) reassignDeadWorkersTasks(ctx context.Context) {
+	deadWorkers := s.workerRegistry.GetDeadWorkers(30 * time.Second)
+	if len(deadWorkers) == 0 {
+		return
+	}
+
+	for _, workerID := range deadWorkers {
+		logger.Get().Warn().
+			Str("worker_id", workerID).
+			Msg("Worker is dead, reassigning its tasks")
+
+		tasks, err := s.taskRepo.GetTasksByWorker(ctx, workerID)
+		if err != nil {
+			logger.Get().Error().
+				Err(err).
+				Str("worker_id", workerID).
+				Msg("Failed to get tasks for dead worker")
+			continue
+		}
+
+		for _, task := range tasks {
+			logger.Get().Info().
+				Str("task_id", task.ID.String()).
+				Str("worker_id", workerID).
+				Msg("Reassigning task from dead worker")
+
+			if err := s.taskRepo.ReassignTask(ctx, task.ID); err != nil {
+				logger.Get().Error().
+					Err(err).
+					Str("task_id", task.ID.String()).
+					Msg("Failed to reassign task")
+			} else {
+				logger.Get().Info().
+					Str("task_id", task.ID.String()).
+					Msg("Task reassigned to pending")
+			}
+		}
+
+		s.workerRegistry.Unregister(workerID)
+	}
+}
+
+func (s *BackendServer) CheckTaskExists(ctx context.Context, req *connect.Request[gen.CheckTaskExistsRequest]) (*connect.Response[gen.CheckTaskExistsResponse], error) {
+	serverID, err := uuid.Parse(req.Msg.ServerId)
+	if err != nil {
+		return connect.NewResponse(&gen.CheckTaskExistsResponse{
+			Exists: false,
+		}), nil
+	}
+
+	exists, err := s.taskRepo.CheckExistingTask(ctx, serverID, domain.SyncDirection(req.Msg.Direction), req.Msg.RemotePath)
+	if err != nil {
+		logger.Get().Error().Err(err).Msg("Failed to check existing task")
+		return connect.NewResponse(&gen.CheckTaskExistsResponse{
+			Exists: false,
+		}), nil
+	}
+
+	return connect.NewResponse(&gen.CheckTaskExistsResponse{
+		Exists: exists,
 	}), nil
 }

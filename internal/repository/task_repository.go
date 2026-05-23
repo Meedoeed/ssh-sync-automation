@@ -13,11 +13,14 @@ type TaskRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.SyncTask, error)
 	ListByServer(ctx context.Context, serverID uuid.UUID, status *domain.SyncStatus, limit int) ([]*domain.SyncTask, error)
 	ListPending(ctx context.Context, limit int) ([]*domain.SyncTask, error)
-	ListAll(ctx context.Context, limit int) ([]*domain.SyncTask, error) // добавить
+	ListAll(ctx context.Context, limit int) ([]*domain.SyncTask, error)
 	Update(ctx context.Context, task *domain.SyncTask) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status domain.SyncStatus, errMsg *string) error
 	UpdateProgress(ctx context.Context, id uuid.UUID, bytesTransferred int64) error
 	IncrementAttempt(ctx context.Context, id uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	DeleteCompletedOlderThan(ctx context.Context, olderThan time.Duration) (int64, error)
+	GetTasksByWorker(ctx context.Context, workerID string) ([]*domain.SyncTask, error)
+	ReassignTask(ctx context.Context, taskID uuid.UUID) error
+	CheckExistingTask(ctx context.Context, serverID uuid.UUID, direction domain.SyncDirection, remotePath string) (bool, error)
 }

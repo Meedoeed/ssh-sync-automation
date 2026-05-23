@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
@@ -22,9 +23,9 @@ func (r *TaskRepo) Create(ctx context.Context, task *domain.SyncTask) error {
 	query := `
 		INSERT INTO sync_tasks (
 			id, server_id, direction, file_name, remote_path, local_path,
-			file_size, status, max_attempts
+			file_size, status, max_attempts, worker_id
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING created_at, updated_at
 	`
 
@@ -36,7 +37,7 @@ func (r *TaskRepo) Create(ctx context.Context, task *domain.SyncTask) error {
 		task.MaxAttempts = 5
 	}
 
-	return r.db.QueryRow(ctx, query,
+	err := r.db.QueryRow(ctx, query,
 		task.ID,
 		task.ServerID,
 		task.Direction,
@@ -46,12 +47,15 @@ func (r *TaskRepo) Create(ctx context.Context, task *domain.SyncTask) error {
 		task.FileSize,
 		task.Status,
 		task.MaxAttempts,
+		task.WorkerID,
 	).Scan(&task.CreatedAt, &task.UpdatedAt)
+
+	return err
 }
 
 func (r *TaskRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.SyncTask, error) {
 	query := `
-		SELECT id, server_id, direction, file_name, remote_path, local_path,
+		SELECT id, server_id, worker_id, direction, file_name, remote_path, local_path,
 		       file_size, bytes_transferred, status, attempt_count, max_attempts,
 		       error_message, started_at, completed_at, created_at, updated_at
 		FROM sync_tasks
@@ -62,6 +66,7 @@ func (r *TaskRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.SyncTask,
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&task.ID,
 		&task.ServerID,
+		&task.WorkerID,
 		&task.Direction,
 		&task.FileName,
 		&task.RemotePath,
@@ -90,7 +95,7 @@ func (r *TaskRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.SyncTask,
 
 func (r *TaskRepo) ListByServer(ctx context.Context, serverID uuid.UUID, status *domain.SyncStatus, limit int) ([]*domain.SyncTask, error) {
 	query := `
-		SELECT id, server_id, direction, file_name, remote_path, local_path,
+		SELECT id, server_id, worker_id, direction, file_name, remote_path, local_path,
 		       file_size, bytes_transferred, status, attempt_count, max_attempts,
 		       error_message, started_at, completed_at, created_at, updated_at
 		FROM sync_tasks
@@ -123,6 +128,7 @@ func (r *TaskRepo) ListByServer(ctx context.Context, serverID uuid.UUID, status 
 		err := rows.Scan(
 			&task.ID,
 			&task.ServerID,
+			&task.WorkerID,
 			&task.Direction,
 			&task.FileName,
 			&task.RemotePath,
@@ -149,7 +155,7 @@ func (r *TaskRepo) ListByServer(ctx context.Context, serverID uuid.UUID, status 
 
 func (r *TaskRepo) ListPending(ctx context.Context, limit int) ([]*domain.SyncTask, error) {
 	query := `
-		SELECT id, server_id, direction, file_name, remote_path, local_path,
+		SELECT id, server_id, worker_id, direction, file_name, remote_path, local_path,
 		       file_size, bytes_transferred, status, attempt_count, max_attempts,
 		       error_message, started_at, completed_at, created_at, updated_at
 		FROM sync_tasks
@@ -171,6 +177,7 @@ func (r *TaskRepo) ListPending(ctx context.Context, limit int) ([]*domain.SyncTa
 		err := rows.Scan(
 			&task.ID,
 			&task.ServerID,
+			&task.WorkerID,
 			&task.Direction,
 			&task.FileName,
 			&task.RemotePath,
@@ -199,7 +206,8 @@ func (r *TaskRepo) Update(ctx context.Context, task *domain.SyncTask) error {
 	query := `
 		UPDATE sync_tasks
 		SET file_size = $2, bytes_transferred = $3, status = $4,
-		    attempt_count = $5, error_message = $6, started_at = $7, completed_at = $8
+		    attempt_count = $5, error_message = $6, started_at = $7, 
+		    completed_at = $8, worker_id = $9
 		WHERE id = $1
 	`
 
@@ -212,6 +220,7 @@ func (r *TaskRepo) Update(ctx context.Context, task *domain.SyncTask) error {
 		task.ErrorMessage,
 		task.StartedAt,
 		task.CompletedAt,
+		task.WorkerID,
 	)
 
 	return err
@@ -234,7 +243,8 @@ func (r *TaskRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status domain
 	if status == domain.StatusCompleted || status == domain.StatusFailed || status == domain.StatusCancelled {
 		queryComplete := `
             UPDATE sync_tasks
-            SET completed_at = NOW()
+            SET completed_at = NOW(),
+                worker_id = NULL
             WHERE id = $1 AND completed_at IS NULL
         `
 		_, err = r.db.Exec(ctx, queryComplete, id)
@@ -242,6 +252,7 @@ func (r *TaskRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status domain
 
 	return err
 }
+
 func (r *TaskRepo) UpdateProgress(ctx context.Context, id uuid.UUID, bytesTransferred int64) error {
 	query := `
 		UPDATE sync_tasks
@@ -287,17 +298,16 @@ func (r *TaskRepo) DeleteCompletedOlderThan(ctx context.Context, olderThan time.
 	return result.RowsAffected(), nil
 }
 
-func (r *TaskRepo) ListAll(ctx context.Context, limit int) ([]*domain.SyncTask, error) {
+func (r *TaskRepo) GetTasksByWorker(ctx context.Context, workerID string) ([]*domain.SyncTask, error) {
 	query := `
-		SELECT id, server_id, direction, file_name, remote_path, local_path,
+		SELECT id, server_id, worker_id, direction, file_name, remote_path, local_path,
 		       file_size, bytes_transferred, status, attempt_count, max_attempts,
 		       error_message, started_at, completed_at, created_at, updated_at
 		FROM sync_tasks
-		ORDER BY created_at DESC
-		LIMIT $1
+		WHERE worker_id = $1 AND status = $2
 	`
 
-	rows, err := r.db.Query(ctx, query, limit)
+	rows, err := r.db.Query(ctx, query, workerID, domain.StatusProcessing)
 	if err != nil {
 		return nil, err
 	}
@@ -309,6 +319,7 @@ func (r *TaskRepo) ListAll(ctx context.Context, limit int) ([]*domain.SyncTask, 
 		err := rows.Scan(
 			&task.ID,
 			&task.ServerID,
+			&task.WorkerID,
 			&task.Direction,
 			&task.FileName,
 			&task.RemotePath,
@@ -331,4 +342,84 @@ func (r *TaskRepo) ListAll(ctx context.Context, limit int) ([]*domain.SyncTask, 
 	}
 
 	return tasks, nil
+}
+
+// ReassignTask переводит задачу обратно в pending
+func (r *TaskRepo) ReassignTask(ctx context.Context, taskID uuid.UUID) error {
+	query := `
+		UPDATE sync_tasks
+		SET status = $1,
+		    worker_id = NULL,
+		    started_at = NULL
+		WHERE id = $2 AND status = $3
+	`
+
+	_, err := r.db.Exec(ctx, query, domain.StatusPending, taskID, domain.StatusProcessing)
+	return err
+}
+
+func (r *TaskRepo) ListAll(ctx context.Context, limit int) ([]*domain.SyncTask, error) {
+	query := `
+		SELECT id, server_id, worker_id, direction, file_name, remote_path, local_path,
+		       file_size, bytes_transferred, status, attempt_count, max_attempts,
+		       error_message, started_at, completed_at, created_at, updated_at
+		FROM sync_tasks
+		ORDER BY created_at DESC
+		LIMIT $1
+	`
+
+	rows, err := r.db.Query(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*domain.SyncTask
+	for rows.Next() {
+		var task domain.SyncTask
+		err := rows.Scan(
+			&task.ID,
+			&task.ServerID,
+			&task.WorkerID,
+			&task.Direction,
+			&task.FileName,
+			&task.RemotePath,
+			&task.LocalPath,
+			&task.FileSize,
+			&task.BytesTransferred,
+			&task.Status,
+			&task.AttemptCount,
+			&task.MaxAttempts,
+			&task.ErrorMessage,
+			&task.StartedAt,
+			&task.CompletedAt,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, &task)
+	}
+
+	return tasks, nil
+}
+
+func (r *TaskRepo) CheckExistingTask(ctx context.Context, serverID uuid.UUID, direction domain.SyncDirection, remotePath string) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM sync_tasks
+			WHERE server_id = $1
+			  AND direction = $2
+			  AND remote_path = $3
+			  AND status IN ('pending', 'processing')
+		)
+	`
+
+	var exists bool
+	err := r.db.QueryRow(ctx, query, serverID, direction, remotePath).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check existing task: %w", err)
+	}
+	return exists, nil
 }
