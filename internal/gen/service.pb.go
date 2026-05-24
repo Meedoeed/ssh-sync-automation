@@ -1024,9 +1024,9 @@ type Server struct {
 	Host          string                 `protobuf:"bytes,3,opt,name=host,proto3" json:"host,omitempty"`
 	Port          int32                  `protobuf:"varint,4,opt,name=port,proto3" json:"port,omitempty"`
 	Username      string                 `protobuf:"bytes,5,opt,name=username,proto3" json:"username,omitempty"`
-	AuthType      string                 `protobuf:"bytes,6,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"`       // "password" или "key"
-	Password      string                 `protobuf:"bytes,7,opt,name=password,proto3" json:"password,omitempty"`                       // опционально (если auth_type password)
-	PrivateKey    string                 `protobuf:"bytes,8,opt,name=private_key,json=privateKey,proto3" json:"private_key,omitempty"` // опционально (если auth_type key)
+	AuthType      string                 `protobuf:"bytes,6,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"`
+	Password      string                 `protobuf:"bytes,7,opt,name=password,proto3" json:"password,omitempty"`
+	PrivateKey    string                 `protobuf:"bytes,8,opt,name=private_key,json=privateKey,proto3" json:"private_key,omitempty"`
 	IsActive      bool                   `protobuf:"varint,9,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1229,6 +1229,382 @@ func (x *CheckTaskExistsResponse) GetExists() bool {
 	return false
 }
 
+type TryBecomeLeaderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SchedulerId   string                 `protobuf:"bytes,1,opt,name=scheduler_id,json=schedulerId,proto3" json:"scheduler_id,omitempty"`
+	TtlSeconds    int32                  `protobuf:"varint,2,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TryBecomeLeaderRequest) Reset() {
+	*x = TryBecomeLeaderRequest{}
+	mi := &file_proto_service_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TryBecomeLeaderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TryBecomeLeaderRequest) ProtoMessage() {}
+
+func (x *TryBecomeLeaderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TryBecomeLeaderRequest.ProtoReflect.Descriptor instead.
+func (*TryBecomeLeaderRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *TryBecomeLeaderRequest) GetSchedulerId() string {
+	if x != nil {
+		return x.SchedulerId
+	}
+	return ""
+}
+
+func (x *TryBecomeLeaderRequest) GetTtlSeconds() int32 {
+	if x != nil {
+		return x.TtlSeconds
+	}
+	return 0
+}
+
+type TryBecomeLeaderResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	IsLeader        bool                   `protobuf:"varint,1,opt,name=is_leader,json=isLeader,proto3" json:"is_leader,omitempty"`
+	CurrentLeaderId string                 `protobuf:"bytes,2,opt,name=current_leader_id,json=currentLeaderId,proto3" json:"current_leader_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *TryBecomeLeaderResponse) Reset() {
+	*x = TryBecomeLeaderResponse{}
+	mi := &file_proto_service_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TryBecomeLeaderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TryBecomeLeaderResponse) ProtoMessage() {}
+
+func (x *TryBecomeLeaderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TryBecomeLeaderResponse.ProtoReflect.Descriptor instead.
+func (*TryBecomeLeaderResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *TryBecomeLeaderResponse) GetIsLeader() bool {
+	if x != nil {
+		return x.IsLeader
+	}
+	return false
+}
+
+func (x *TryBecomeLeaderResponse) GetCurrentLeaderId() string {
+	if x != nil {
+		return x.CurrentLeaderId
+	}
+	return ""
+}
+
+type RenewLeadershipRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SchedulerId   string                 `protobuf:"bytes,1,opt,name=scheduler_id,json=schedulerId,proto3" json:"scheduler_id,omitempty"`
+	TtlSeconds    int32                  `protobuf:"varint,2,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenewLeadershipRequest) Reset() {
+	*x = RenewLeadershipRequest{}
+	mi := &file_proto_service_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenewLeadershipRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenewLeadershipRequest) ProtoMessage() {}
+
+func (x *RenewLeadershipRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenewLeadershipRequest.ProtoReflect.Descriptor instead.
+func (*RenewLeadershipRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *RenewLeadershipRequest) GetSchedulerId() string {
+	if x != nil {
+		return x.SchedulerId
+	}
+	return ""
+}
+
+func (x *RenewLeadershipRequest) GetTtlSeconds() int32 {
+	if x != nil {
+		return x.TtlSeconds
+	}
+	return 0
+}
+
+type RenewLeadershipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenewLeadershipResponse) Reset() {
+	*x = RenewLeadershipResponse{}
+	mi := &file_proto_service_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenewLeadershipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenewLeadershipResponse) ProtoMessage() {}
+
+func (x *RenewLeadershipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenewLeadershipResponse.ProtoReflect.Descriptor instead.
+func (*RenewLeadershipResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *RenewLeadershipResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type ReleaseLeadershipRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SchedulerId   string                 `protobuf:"bytes,1,opt,name=scheduler_id,json=schedulerId,proto3" json:"scheduler_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseLeadershipRequest) Reset() {
+	*x = ReleaseLeadershipRequest{}
+	mi := &file_proto_service_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseLeadershipRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseLeadershipRequest) ProtoMessage() {}
+
+func (x *ReleaseLeadershipRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseLeadershipRequest.ProtoReflect.Descriptor instead.
+func (*ReleaseLeadershipRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ReleaseLeadershipRequest) GetSchedulerId() string {
+	if x != nil {
+		return x.SchedulerId
+	}
+	return ""
+}
+
+type ReleaseLeadershipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseLeadershipResponse) Reset() {
+	*x = ReleaseLeadershipResponse{}
+	mi := &file_proto_service_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseLeadershipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseLeadershipResponse) ProtoMessage() {}
+
+func (x *ReleaseLeadershipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseLeadershipResponse.ProtoReflect.Descriptor instead.
+func (*ReleaseLeadershipResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ReleaseLeadershipResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type GetLeaderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLeaderRequest) Reset() {
+	*x = GetLeaderRequest{}
+	mi := &file_proto_service_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLeaderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLeaderRequest) ProtoMessage() {}
+
+func (x *GetLeaderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLeaderRequest.ProtoReflect.Descriptor instead.
+func (*GetLeaderRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{28}
+}
+
+type GetLeaderResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LeaderId      string                 `protobuf:"bytes,1,opt,name=leader_id,json=leaderId,proto3" json:"leader_id,omitempty"`
+	LastHeartbeat string                 `protobuf:"bytes,2,opt,name=last_heartbeat,json=lastHeartbeat,proto3" json:"last_heartbeat,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLeaderResponse) Reset() {
+	*x = GetLeaderResponse{}
+	mi := &file_proto_service_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLeaderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLeaderResponse) ProtoMessage() {}
+
+func (x *GetLeaderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLeaderResponse.ProtoReflect.Descriptor instead.
+func (*GetLeaderResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *GetLeaderResponse) GetLeaderId() string {
+	if x != nil {
+		return x.LeaderId
+	}
+	return ""
+}
+
+func (x *GetLeaderResponse) GetLastHeartbeat() string {
+	if x != nil {
+		return x.LastHeartbeat
+	}
+	return ""
+}
+
 var File_proto_service_proto protoreflect.FileDescriptor
 
 const file_proto_service_proto_rawDesc = "" +
@@ -1314,7 +1690,28 @@ const file_proto_service_proto_rawDesc = "" +
 	"\vremote_path\x18\x03 \x01(\tR\n" +
 	"remotePath\"1\n" +
 	"\x17CheckTaskExistsResponse\x12\x16\n" +
-	"\x06exists\x18\x01 \x01(\bR\x06exists2\xa2\x05\n" +
+	"\x06exists\x18\x01 \x01(\bR\x06exists\"\\\n" +
+	"\x16TryBecomeLeaderRequest\x12!\n" +
+	"\fscheduler_id\x18\x01 \x01(\tR\vschedulerId\x12\x1f\n" +
+	"\vttl_seconds\x18\x02 \x01(\x05R\n" +
+	"ttlSeconds\"b\n" +
+	"\x17TryBecomeLeaderResponse\x12\x1b\n" +
+	"\tis_leader\x18\x01 \x01(\bR\bisLeader\x12*\n" +
+	"\x11current_leader_id\x18\x02 \x01(\tR\x0fcurrentLeaderId\"\\\n" +
+	"\x16RenewLeadershipRequest\x12!\n" +
+	"\fscheduler_id\x18\x01 \x01(\tR\vschedulerId\x12\x1f\n" +
+	"\vttl_seconds\x18\x02 \x01(\x05R\n" +
+	"ttlSeconds\"3\n" +
+	"\x17RenewLeadershipResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"=\n" +
+	"\x18ReleaseLeadershipRequest\x12!\n" +
+	"\fscheduler_id\x18\x01 \x01(\tR\vschedulerId\"5\n" +
+	"\x19ReleaseLeadershipResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x12\n" +
+	"\x10GetLeaderRequest\"W\n" +
+	"\x11GetLeaderResponse\x12\x1b\n" +
+	"\tleader_id\x18\x01 \x01(\tR\bleaderId\x12%\n" +
+	"\x0elast_heartbeat\x18\x02 \x01(\tR\rlastHeartbeat2\xce\a\n" +
 	"\x0eBackendService\x12I\n" +
 	"\x0eRegisterWorker\x12\x1a.rpc.RegisterWorkerRequest\x1a\x1b.rpc.RegisterWorkerResponse\x12:\n" +
 	"\tHeartbeat\x12\x15.rpc.HeartbeatRequest\x1a\x16.rpc.HeartbeatResponse\x124\n" +
@@ -1327,7 +1724,11 @@ const file_proto_service_proto_rawDesc = "" +
 	"\n" +
 	"GetServers\x12\x16.rpc.GetServersRequest\x1a\x17.rpc.GetServersResponse\x12:\n" +
 	"\tGetServer\x12\x15.rpc.GetServerRequest\x1a\x16.rpc.GetServerResponse\x12L\n" +
-	"\x0fCheckTaskExists\x12\x1b.rpc.CheckTaskExistsRequest\x1a\x1c.rpc.CheckTaskExistsResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
+	"\x0fCheckTaskExists\x12\x1b.rpc.CheckTaskExistsRequest\x1a\x1c.rpc.CheckTaskExistsResponse\x12L\n" +
+	"\x0fTryBecomeLeader\x12\x1b.rpc.TryBecomeLeaderRequest\x1a\x1c.rpc.TryBecomeLeaderResponse\x12L\n" +
+	"\x0fRenewLeadership\x12\x1b.rpc.RenewLeadershipRequest\x1a\x1c.rpc.RenewLeadershipResponse\x12R\n" +
+	"\x11ReleaseLeadership\x12\x1d.rpc.ReleaseLeadershipRequest\x1a\x1e.rpc.ReleaseLeadershipResponse\x12:\n" +
+	"\tGetLeader\x12\x15.rpc.GetLeaderRequest\x1a\x16.rpc.GetLeaderResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
 
 var (
 	file_proto_service_proto_rawDescOnce sync.Once
@@ -1341,30 +1742,38 @@ func file_proto_service_proto_rawDescGZIP() []byte {
 	return file_proto_service_proto_rawDescData
 }
 
-var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_proto_service_proto_goTypes = []any{
-	(*RegisterWorkerRequest)(nil),   // 0: rpc.RegisterWorkerRequest
-	(*RegisterWorkerResponse)(nil),  // 1: rpc.RegisterWorkerResponse
-	(*HeartbeatRequest)(nil),        // 2: rpc.HeartbeatRequest
-	(*HeartbeatResponse)(nil),       // 3: rpc.HeartbeatResponse
-	(*GetTaskRequest)(nil),          // 4: rpc.GetTaskRequest
-	(*GetTaskResponse)(nil),         // 5: rpc.GetTaskResponse
-	(*Task)(nil),                    // 6: rpc.Task
-	(*UpdateProgressRequest)(nil),   // 7: rpc.UpdateProgressRequest
-	(*UpdateProgressResponse)(nil),  // 8: rpc.UpdateProgressResponse
-	(*CompleteTaskRequest)(nil),     // 9: rpc.CompleteTaskRequest
-	(*CompleteTaskResponse)(nil),    // 10: rpc.CompleteTaskResponse
-	(*FailTaskRequest)(nil),         // 11: rpc.FailTaskRequest
-	(*FailTaskResponse)(nil),        // 12: rpc.FailTaskResponse
-	(*CreateTaskRequest)(nil),       // 13: rpc.CreateTaskRequest
-	(*CreateTaskResponse)(nil),      // 14: rpc.CreateTaskResponse
-	(*GetServersRequest)(nil),       // 15: rpc.GetServersRequest
-	(*GetServersResponse)(nil),      // 16: rpc.GetServersResponse
-	(*GetServerRequest)(nil),        // 17: rpc.GetServerRequest
-	(*GetServerResponse)(nil),       // 18: rpc.GetServerResponse
-	(*Server)(nil),                  // 19: rpc.Server
-	(*CheckTaskExistsRequest)(nil),  // 20: rpc.CheckTaskExistsRequest
-	(*CheckTaskExistsResponse)(nil), // 21: rpc.CheckTaskExistsResponse
+	(*RegisterWorkerRequest)(nil),     // 0: rpc.RegisterWorkerRequest
+	(*RegisterWorkerResponse)(nil),    // 1: rpc.RegisterWorkerResponse
+	(*HeartbeatRequest)(nil),          // 2: rpc.HeartbeatRequest
+	(*HeartbeatResponse)(nil),         // 3: rpc.HeartbeatResponse
+	(*GetTaskRequest)(nil),            // 4: rpc.GetTaskRequest
+	(*GetTaskResponse)(nil),           // 5: rpc.GetTaskResponse
+	(*Task)(nil),                      // 6: rpc.Task
+	(*UpdateProgressRequest)(nil),     // 7: rpc.UpdateProgressRequest
+	(*UpdateProgressResponse)(nil),    // 8: rpc.UpdateProgressResponse
+	(*CompleteTaskRequest)(nil),       // 9: rpc.CompleteTaskRequest
+	(*CompleteTaskResponse)(nil),      // 10: rpc.CompleteTaskResponse
+	(*FailTaskRequest)(nil),           // 11: rpc.FailTaskRequest
+	(*FailTaskResponse)(nil),          // 12: rpc.FailTaskResponse
+	(*CreateTaskRequest)(nil),         // 13: rpc.CreateTaskRequest
+	(*CreateTaskResponse)(nil),        // 14: rpc.CreateTaskResponse
+	(*GetServersRequest)(nil),         // 15: rpc.GetServersRequest
+	(*GetServersResponse)(nil),        // 16: rpc.GetServersResponse
+	(*GetServerRequest)(nil),          // 17: rpc.GetServerRequest
+	(*GetServerResponse)(nil),         // 18: rpc.GetServerResponse
+	(*Server)(nil),                    // 19: rpc.Server
+	(*CheckTaskExistsRequest)(nil),    // 20: rpc.CheckTaskExistsRequest
+	(*CheckTaskExistsResponse)(nil),   // 21: rpc.CheckTaskExistsResponse
+	(*TryBecomeLeaderRequest)(nil),    // 22: rpc.TryBecomeLeaderRequest
+	(*TryBecomeLeaderResponse)(nil),   // 23: rpc.TryBecomeLeaderResponse
+	(*RenewLeadershipRequest)(nil),    // 24: rpc.RenewLeadershipRequest
+	(*RenewLeadershipResponse)(nil),   // 25: rpc.RenewLeadershipResponse
+	(*ReleaseLeadershipRequest)(nil),  // 26: rpc.ReleaseLeadershipRequest
+	(*ReleaseLeadershipResponse)(nil), // 27: rpc.ReleaseLeadershipResponse
+	(*GetLeaderRequest)(nil),          // 28: rpc.GetLeaderRequest
+	(*GetLeaderResponse)(nil),         // 29: rpc.GetLeaderResponse
 }
 var file_proto_service_proto_depIdxs = []int32{
 	6,  // 0: rpc.GetTaskResponse.task:type_name -> rpc.Task
@@ -1380,18 +1789,26 @@ var file_proto_service_proto_depIdxs = []int32{
 	15, // 10: rpc.BackendService.GetServers:input_type -> rpc.GetServersRequest
 	17, // 11: rpc.BackendService.GetServer:input_type -> rpc.GetServerRequest
 	20, // 12: rpc.BackendService.CheckTaskExists:input_type -> rpc.CheckTaskExistsRequest
-	1,  // 13: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
-	3,  // 14: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
-	5,  // 15: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
-	8,  // 16: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
-	10, // 17: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
-	12, // 18: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
-	14, // 19: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
-	16, // 20: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
-	18, // 21: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
-	21, // 22: rpc.BackendService.CheckTaskExists:output_type -> rpc.CheckTaskExistsResponse
-	13, // [13:23] is the sub-list for method output_type
-	3,  // [3:13] is the sub-list for method input_type
+	22, // 13: rpc.BackendService.TryBecomeLeader:input_type -> rpc.TryBecomeLeaderRequest
+	24, // 14: rpc.BackendService.RenewLeadership:input_type -> rpc.RenewLeadershipRequest
+	26, // 15: rpc.BackendService.ReleaseLeadership:input_type -> rpc.ReleaseLeadershipRequest
+	28, // 16: rpc.BackendService.GetLeader:input_type -> rpc.GetLeaderRequest
+	1,  // 17: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
+	3,  // 18: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
+	5,  // 19: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
+	8,  // 20: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
+	10, // 21: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
+	12, // 22: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
+	14, // 23: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
+	16, // 24: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
+	18, // 25: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
+	21, // 26: rpc.BackendService.CheckTaskExists:output_type -> rpc.CheckTaskExistsResponse
+	23, // 27: rpc.BackendService.TryBecomeLeader:output_type -> rpc.TryBecomeLeaderResponse
+	25, // 28: rpc.BackendService.RenewLeadership:output_type -> rpc.RenewLeadershipResponse
+	27, // 29: rpc.BackendService.ReleaseLeadership:output_type -> rpc.ReleaseLeadershipResponse
+	29, // 30: rpc.BackendService.GetLeader:output_type -> rpc.GetLeaderResponse
+	17, // [17:31] is the sub-list for method output_type
+	3,  // [3:17] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -1408,7 +1825,7 @@ func file_proto_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_service_proto_rawDesc), len(file_proto_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

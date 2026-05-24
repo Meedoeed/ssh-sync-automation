@@ -61,6 +61,18 @@ const (
 	// BackendServiceCheckTaskExistsProcedure is the fully-qualified name of the BackendService's
 	// CheckTaskExists RPC.
 	BackendServiceCheckTaskExistsProcedure = "/rpc.BackendService/CheckTaskExists"
+	// BackendServiceTryBecomeLeaderProcedure is the fully-qualified name of the BackendService's
+	// TryBecomeLeader RPC.
+	BackendServiceTryBecomeLeaderProcedure = "/rpc.BackendService/TryBecomeLeader"
+	// BackendServiceRenewLeadershipProcedure is the fully-qualified name of the BackendService's
+	// RenewLeadership RPC.
+	BackendServiceRenewLeadershipProcedure = "/rpc.BackendService/RenewLeadership"
+	// BackendServiceReleaseLeadershipProcedure is the fully-qualified name of the BackendService's
+	// ReleaseLeadership RPC.
+	BackendServiceReleaseLeadershipProcedure = "/rpc.BackendService/ReleaseLeadership"
+	// BackendServiceGetLeaderProcedure is the fully-qualified name of the BackendService's GetLeader
+	// RPC.
+	BackendServiceGetLeaderProcedure = "/rpc.BackendService/GetLeader"
 )
 
 // BackendServiceClient is a client for the rpc.BackendService service.
@@ -75,6 +87,10 @@ type BackendServiceClient interface {
 	GetServers(context.Context, *connect.Request[gen.GetServersRequest]) (*connect.Response[gen.GetServersResponse], error)
 	GetServer(context.Context, *connect.Request[gen.GetServerRequest]) (*connect.Response[gen.GetServerResponse], error)
 	CheckTaskExists(context.Context, *connect.Request[gen.CheckTaskExistsRequest]) (*connect.Response[gen.CheckTaskExistsResponse], error)
+	TryBecomeLeader(context.Context, *connect.Request[gen.TryBecomeLeaderRequest]) (*connect.Response[gen.TryBecomeLeaderResponse], error)
+	RenewLeadership(context.Context, *connect.Request[gen.RenewLeadershipRequest]) (*connect.Response[gen.RenewLeadershipResponse], error)
+	ReleaseLeadership(context.Context, *connect.Request[gen.ReleaseLeadershipRequest]) (*connect.Response[gen.ReleaseLeadershipResponse], error)
+	GetLeader(context.Context, *connect.Request[gen.GetLeaderRequest]) (*connect.Response[gen.GetLeaderResponse], error)
 }
 
 // NewBackendServiceClient constructs a client for the rpc.BackendService service. By default, it
@@ -148,6 +164,30 @@ func NewBackendServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(backendServiceMethods.ByName("CheckTaskExists")),
 			connect.WithClientOptions(opts...),
 		),
+		tryBecomeLeader: connect.NewClient[gen.TryBecomeLeaderRequest, gen.TryBecomeLeaderResponse](
+			httpClient,
+			baseURL+BackendServiceTryBecomeLeaderProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("TryBecomeLeader")),
+			connect.WithClientOptions(opts...),
+		),
+		renewLeadership: connect.NewClient[gen.RenewLeadershipRequest, gen.RenewLeadershipResponse](
+			httpClient,
+			baseURL+BackendServiceRenewLeadershipProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("RenewLeadership")),
+			connect.WithClientOptions(opts...),
+		),
+		releaseLeadership: connect.NewClient[gen.ReleaseLeadershipRequest, gen.ReleaseLeadershipResponse](
+			httpClient,
+			baseURL+BackendServiceReleaseLeadershipProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("ReleaseLeadership")),
+			connect.WithClientOptions(opts...),
+		),
+		getLeader: connect.NewClient[gen.GetLeaderRequest, gen.GetLeaderResponse](
+			httpClient,
+			baseURL+BackendServiceGetLeaderProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("GetLeader")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -163,6 +203,10 @@ type backendServiceClient struct {
 	getServers         *connect.Client[gen.GetServersRequest, gen.GetServersResponse]
 	getServer          *connect.Client[gen.GetServerRequest, gen.GetServerResponse]
 	checkTaskExists    *connect.Client[gen.CheckTaskExistsRequest, gen.CheckTaskExistsResponse]
+	tryBecomeLeader    *connect.Client[gen.TryBecomeLeaderRequest, gen.TryBecomeLeaderResponse]
+	renewLeadership    *connect.Client[gen.RenewLeadershipRequest, gen.RenewLeadershipResponse]
+	releaseLeadership  *connect.Client[gen.ReleaseLeadershipRequest, gen.ReleaseLeadershipResponse]
+	getLeader          *connect.Client[gen.GetLeaderRequest, gen.GetLeaderResponse]
 }
 
 // RegisterWorker calls rpc.BackendService.RegisterWorker.
@@ -215,6 +259,26 @@ func (c *backendServiceClient) CheckTaskExists(ctx context.Context, req *connect
 	return c.checkTaskExists.CallUnary(ctx, req)
 }
 
+// TryBecomeLeader calls rpc.BackendService.TryBecomeLeader.
+func (c *backendServiceClient) TryBecomeLeader(ctx context.Context, req *connect.Request[gen.TryBecomeLeaderRequest]) (*connect.Response[gen.TryBecomeLeaderResponse], error) {
+	return c.tryBecomeLeader.CallUnary(ctx, req)
+}
+
+// RenewLeadership calls rpc.BackendService.RenewLeadership.
+func (c *backendServiceClient) RenewLeadership(ctx context.Context, req *connect.Request[gen.RenewLeadershipRequest]) (*connect.Response[gen.RenewLeadershipResponse], error) {
+	return c.renewLeadership.CallUnary(ctx, req)
+}
+
+// ReleaseLeadership calls rpc.BackendService.ReleaseLeadership.
+func (c *backendServiceClient) ReleaseLeadership(ctx context.Context, req *connect.Request[gen.ReleaseLeadershipRequest]) (*connect.Response[gen.ReleaseLeadershipResponse], error) {
+	return c.releaseLeadership.CallUnary(ctx, req)
+}
+
+// GetLeader calls rpc.BackendService.GetLeader.
+func (c *backendServiceClient) GetLeader(ctx context.Context, req *connect.Request[gen.GetLeaderRequest]) (*connect.Response[gen.GetLeaderResponse], error) {
+	return c.getLeader.CallUnary(ctx, req)
+}
+
 // BackendServiceHandler is an implementation of the rpc.BackendService service.
 type BackendServiceHandler interface {
 	RegisterWorker(context.Context, *connect.Request[gen.RegisterWorkerRequest]) (*connect.Response[gen.RegisterWorkerResponse], error)
@@ -227,6 +291,10 @@ type BackendServiceHandler interface {
 	GetServers(context.Context, *connect.Request[gen.GetServersRequest]) (*connect.Response[gen.GetServersResponse], error)
 	GetServer(context.Context, *connect.Request[gen.GetServerRequest]) (*connect.Response[gen.GetServerResponse], error)
 	CheckTaskExists(context.Context, *connect.Request[gen.CheckTaskExistsRequest]) (*connect.Response[gen.CheckTaskExistsResponse], error)
+	TryBecomeLeader(context.Context, *connect.Request[gen.TryBecomeLeaderRequest]) (*connect.Response[gen.TryBecomeLeaderResponse], error)
+	RenewLeadership(context.Context, *connect.Request[gen.RenewLeadershipRequest]) (*connect.Response[gen.RenewLeadershipResponse], error)
+	ReleaseLeadership(context.Context, *connect.Request[gen.ReleaseLeadershipRequest]) (*connect.Response[gen.ReleaseLeadershipResponse], error)
+	GetLeader(context.Context, *connect.Request[gen.GetLeaderRequest]) (*connect.Response[gen.GetLeaderResponse], error)
 }
 
 // NewBackendServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -296,6 +364,30 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 		connect.WithSchema(backendServiceMethods.ByName("CheckTaskExists")),
 		connect.WithHandlerOptions(opts...),
 	)
+	backendServiceTryBecomeLeaderHandler := connect.NewUnaryHandler(
+		BackendServiceTryBecomeLeaderProcedure,
+		svc.TryBecomeLeader,
+		connect.WithSchema(backendServiceMethods.ByName("TryBecomeLeader")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceRenewLeadershipHandler := connect.NewUnaryHandler(
+		BackendServiceRenewLeadershipProcedure,
+		svc.RenewLeadership,
+		connect.WithSchema(backendServiceMethods.ByName("RenewLeadership")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceReleaseLeadershipHandler := connect.NewUnaryHandler(
+		BackendServiceReleaseLeadershipProcedure,
+		svc.ReleaseLeadership,
+		connect.WithSchema(backendServiceMethods.ByName("ReleaseLeadership")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceGetLeaderHandler := connect.NewUnaryHandler(
+		BackendServiceGetLeaderProcedure,
+		svc.GetLeader,
+		connect.WithSchema(backendServiceMethods.ByName("GetLeader")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/rpc.BackendService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BackendServiceRegisterWorkerProcedure:
@@ -318,6 +410,14 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 			backendServiceGetServerHandler.ServeHTTP(w, r)
 		case BackendServiceCheckTaskExistsProcedure:
 			backendServiceCheckTaskExistsHandler.ServeHTTP(w, r)
+		case BackendServiceTryBecomeLeaderProcedure:
+			backendServiceTryBecomeLeaderHandler.ServeHTTP(w, r)
+		case BackendServiceRenewLeadershipProcedure:
+			backendServiceRenewLeadershipHandler.ServeHTTP(w, r)
+		case BackendServiceReleaseLeadershipProcedure:
+			backendServiceReleaseLeadershipHandler.ServeHTTP(w, r)
+		case BackendServiceGetLeaderProcedure:
+			backendServiceGetLeaderHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -365,4 +465,20 @@ func (UnimplementedBackendServiceHandler) GetServer(context.Context, *connect.Re
 
 func (UnimplementedBackendServiceHandler) CheckTaskExists(context.Context, *connect.Request[gen.CheckTaskExistsRequest]) (*connect.Response[gen.CheckTaskExistsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.CheckTaskExists is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) TryBecomeLeader(context.Context, *connect.Request[gen.TryBecomeLeaderRequest]) (*connect.Response[gen.TryBecomeLeaderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.TryBecomeLeader is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) RenewLeadership(context.Context, *connect.Request[gen.RenewLeadershipRequest]) (*connect.Response[gen.RenewLeadershipResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.RenewLeadership is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) ReleaseLeadership(context.Context, *connect.Request[gen.ReleaseLeadershipRequest]) (*connect.Response[gen.ReleaseLeadershipResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.ReleaseLeadership is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) GetLeader(context.Context, *connect.Request[gen.GetLeaderRequest]) (*connect.Response[gen.GetLeaderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.GetLeader is not implemented"))
 }

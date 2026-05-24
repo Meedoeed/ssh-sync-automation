@@ -19,6 +19,11 @@ service BackendService {
   rpc GetServer(GetServerRequest) returns (GetServerResponse);
 
   rpc CheckTaskExists(CheckTaskExistsRequest) returns (CheckTaskExistsResponse);
+
+  rpc TryBecomeLeader(TryBecomeLeaderRequest) returns (TryBecomeLeaderResponse);
+  rpc RenewLeadership(RenewLeadershipRequest) returns (RenewLeadershipResponse);
+  rpc ReleaseLeadership(ReleaseLeadershipRequest) returns (ReleaseLeadershipResponse);
+  rpc GetLeader(GetLeaderRequest) returns (GetLeaderResponse);
 }
 
 message RegisterWorkerRequest {
@@ -123,9 +128,9 @@ message Server {
   string host = 3;
   int32 port = 4;
   string username = 5;
-  string auth_type = 6;      // "password" или "key"
-  string password = 7;       // опционально (если auth_type password)
-  string private_key = 8;    // опционально (если auth_type key)
+  string auth_type = 6;   
+  string password = 7;  
+  string private_key = 8; 
   bool is_active = 9;
 }
 
@@ -137,4 +142,38 @@ message CheckTaskExistsRequest {
 
 message CheckTaskExistsResponse {
   bool exists = 1;
+}
+
+message TryBecomeLeaderRequest {
+  string scheduler_id = 1;
+  int32 ttl_seconds = 2;
+}
+
+message TryBecomeLeaderResponse {
+  bool is_leader = 1;
+  string current_leader_id = 2;
+}
+
+message RenewLeadershipRequest {
+  string scheduler_id = 1;
+  int32 ttl_seconds = 2;
+}
+
+message RenewLeadershipResponse {
+  bool success = 1;
+}
+
+message ReleaseLeadershipRequest {
+  string scheduler_id = 1;
+}
+
+message ReleaseLeadershipResponse {
+  bool success = 1;
+}
+
+message GetLeaderRequest {}
+
+message GetLeaderResponse {
+  string leader_id = 1;
+  string last_heartbeat = 2;
 }

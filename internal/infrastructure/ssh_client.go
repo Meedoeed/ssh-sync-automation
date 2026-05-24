@@ -1,9 +1,12 @@
 package infrastructure
 
 import (
+	"bufio"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,6 +30,7 @@ type SSHClient struct {
 	keepAliveWg     sync.WaitGroup
 	mu              sync.RWMutex
 	connected       bool
+	hostKeyChecker  *HostKeyChecker
 }
 
 type SSHClientInterface interface {
@@ -42,6 +46,165 @@ type SSHClientInterface interface {
 	UploadWithRetryProgress(localPath, remotePath string, progressCallback func(uploaded, total int64)) error // добавить
 	DeleteFile(remotePath string) error
 	GetFileSize(remotePath string) (int64, error)
+	CreateEmptyFile(remotePath string) (*sftp.File, error)
+}
+
+type HostKeyChecker struct {
+	knownHostsPath string
+	autoAddEnabled bool
+}
+
+func NewHostKeyChecker(knownHostsPath string) *HostKeyChecker {
+	logger.Get().Info().Str("input_path", knownHostsPath).Msg("NewHostKeyChecker called")
+
+	if knownHostsPath == "" {
+		knownHostsPath = "./data/ssh/known_hosts"
+		logger.Get().Info().Str("resolved_path", knownHostsPath).Msg("Using default path")
+	}
+
+	sshDir := filepath.Dir(knownHostsPath)
+	logger.Get().Info().Str("ssh_dir", sshDir).Msg("Creating .ssh directory")
+
+	if err := os.MkdirAll(sshDir, 0700); err != nil {
+		logger.Get().Warn().Err(err).Msg("Failed to create .ssh directory")
+	} else {
+		logger.Get().Info().Str("ssh_dir", sshDir).Msg(".ssh directory created")
+	}
+
+	if _, err := os.Stat(knownHostsPath); os.IsNotExist(err) {
+		logger.Get().Info().Str("path", knownHostsPath).Msg("known_hosts file does not exist, creating")
+		file, err := os.Create(knownHostsPath)
+		if err != nil {
+			logger.Get().Warn().Err(err).Msg("Failed to create known_hosts file")
+		} else {
+			file.Close()
+			logger.Get().Info().Str("path", knownHostsPath).Msg("Created new known_hosts file")
+		}
+	} else {
+		logger.Get().Info().Str("path", knownHostsPath).Msg("known_hosts file already exists")
+	}
+
+	return &HostKeyChecker{
+		autoAddEnabled: true,
+		knownHostsPath: knownHostsPath,
+	}
+}
+
+func (c *HostKeyChecker) EnableAutoAdd(enabled bool) {
+	c.autoAddEnabled = enabled
+}
+
+func (c *HostKeyChecker) CheckHostKey(hostname string, remote net.Addr, key ssh.PublicKey) error {
+	found, matched := c.findHostKey(hostname, key)
+
+	if found && matched {
+		return nil
+	}
+
+	if found && !matched {
+		logger.Get().Error().
+			Str("hostname", hostname).
+			Str("fingerprint", ssh.FingerprintSHA256(key)).
+			Msg("HOST KEY MISMATCH! Connection rejected")
+		return fmt.Errorf("host key mismatch for %s", hostname)
+	}
+
+	if !found && c.autoAddEnabled {
+		logger.Get().Info().
+			Str("hostname", hostname).
+			Msg("First connection - adding host key to known_hosts")
+
+		if err := c.addHostKey(hostname, key); err != nil {
+			logger.Get().Warn().
+				Err(err).
+				Str("hostname", hostname).
+				Msg("Failed to add host key")
+			return err
+		}
+
+		logger.Get().Info().
+			Str("hostname", hostname).
+			Msg("Host key added - future connections will be trusted")
+		return nil
+	}
+
+	return fmt.Errorf("host key not found for %s", hostname)
+}
+
+func (c *HostKeyChecker) findHostKey(hostname string, key ssh.PublicKey) (bool, bool) {
+	file, err := os.Open(c.knownHostsPath)
+	if err != nil {
+		return false, false
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	keyStr := base64.StdEncoding.EncodeToString(key.Marshal())
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "#") || strings.TrimSpace(line) == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+
+		hostPatterns := strings.Split(fields[0], ",")
+		hostMatched := false
+		for _, pattern := range hostPatterns {
+			if c.matchHost(pattern, hostname) {
+				hostMatched = true
+				break
+			}
+		}
+		if !hostMatched {
+			continue
+		}
+
+		if len(fields) >= 3 && fields[2] == keyStr {
+			return true, true
+		}
+		return true, false
+	}
+
+	return false, false
+}
+
+func (c *HostKeyChecker) addHostKey(hostname string, key ssh.PublicKey) error {
+	sshDir := filepath.Dir(c.knownHostsPath)
+	if err := os.MkdirAll(sshDir, 0700); err != nil {
+		return fmt.Errorf("failed to create .ssh directory: %w", err)
+	}
+
+	file, err := os.OpenFile(c.knownHostsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to open known_hosts: %w", err)
+	}
+	defer file.Close()
+
+	keyLine := fmt.Sprintf("%s %s %s\n", hostname, key.Type(), base64.StdEncoding.EncodeToString(key.Marshal()))
+
+	if _, err := file.WriteString(keyLine); err != nil {
+		return fmt.Errorf("failed to write to known_hosts: %w", err)
+	}
+
+	return nil
+}
+
+func (c *HostKeyChecker) matchHost(pattern, hostname string) bool {
+	if pattern == hostname {
+		return true
+	}
+	if strings.Contains(pattern, "*") {
+		parts := strings.Split(pattern, "*")
+		if strings.HasPrefix(hostname, parts[0]) && strings.HasSuffix(hostname, parts[len(parts)-1]) {
+			return true
+		}
+	}
+	return false
 }
 
 func NewSSHClient(cfg *config.SyncCfg) *SSHClient {
@@ -54,7 +217,8 @@ func NewSSHClient(cfg *config.SyncCfg) *SSHClient {
 		}
 	}
 	return &SSHClient{
-		config: cfg,
+		config:         cfg,
+		hostKeyChecker: NewHostKeyChecker(""),
 	}
 }
 
@@ -99,7 +263,7 @@ func (c *SSHClient) Connect(server *domain.Server) error {
 	sshConfig := &ssh.ClientConfig{
 		User:            server.Username,
 		Auth:            methods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: c.verifyHostKey,
 		Timeout:         c.config.SSHConTimeout,
 	}
 
@@ -132,6 +296,20 @@ func (c *SSHClient) Connect(server *domain.Server) error {
 		Msg("SSH connection established successfully")
 
 	return nil
+}
+
+func (c *SSHClient) verifyHostKey(hostname string, remote net.Addr, key ssh.PublicKey) error {
+	cleanHostname := hostname
+	if idx := strings.Index(hostname, ":"); idx != -1 {
+		cleanHostname = hostname[:idx]
+	}
+
+	logger.Get().Info().
+		Str("hostname", cleanHostname).
+		Str("known_hosts_path", c.hostKeyChecker.knownHostsPath).
+		Msg("verifyHostKey called")
+
+	return c.hostKeyChecker.CheckHostKey(cleanHostname, remote, key)
 }
 
 func (c *SSHClient) startKeepAlive(serverName string) {
@@ -319,7 +497,7 @@ func (c *SSHClient) reconnectAttempt(server *domain.Server) error {
 	sshConfig := &ssh.ClientConfig{
 		User:            server.Username,
 		Auth:            methods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: c.verifyHostKey,
 		Timeout:         c.config.SSHConTimeout,
 	}
 
@@ -576,7 +754,6 @@ func (c *SSHClient) DownloadWithProgress(remotePath, localPath string, progressC
 		return fmt.Errorf("not connected")
 	}
 
-	// Создаём директорию для локального файла
 	if err := ensureLocalDir(localPath); err != nil {
 		return err
 	}
@@ -593,10 +770,8 @@ func (c *SSHClient) DownloadWithProgress(remotePath, localPath string, progressC
 	}
 	totalSize := remoteInfo.Size()
 
-	// Генерируем уникальное локальное имя, если файл уже существует
 	finalLocalPath := getUniqueLocalPath(localPath)
 
-	// Пустой файл (0 байт) - просто создаём локально
 	if totalSize == 0 {
 		logger.Get().Debug().
 			Str("file", remotePath).
@@ -636,7 +811,6 @@ func (c *SSHClient) DownloadWithProgress(remotePath, localPath string, progressC
 			offset = 0
 			os.Remove(partPath)
 		} else {
-			// Файл уже полностью скачан
 			return os.Rename(partPath, finalLocalPath)
 		}
 	}
@@ -711,7 +885,6 @@ func (c *SSHClient) UploadWithProgress(localPath, remotePath string, progressCal
 		return fmt.Errorf("not connected")
 	}
 
-	// Проверяем существование локального файла
 	localInfo, err := os.Stat(localPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -721,10 +894,8 @@ func (c *SSHClient) UploadWithProgress(localPath, remotePath string, progressCal
 	}
 	totalSize := localInfo.Size()
 
-	// Генерируем уникальное удалённое имя, если файл уже существует
 	finalRemotePath := getUniqueRemotePath(c.sftpClient, remotePath)
 
-	// Пустой файл (0 байт) - просто создаём на сервере
 	if totalSize == 0 {
 		logger.Get().Debug().
 			Str("file", localPath).
@@ -774,7 +945,6 @@ func (c *SSHClient) UploadWithProgress(localPath, remotePath string, progressCal
 			c.sftpClient.Remove(remotePartPath)
 			offset = 0
 		} else {
-			// Файл уже полностью загружен
 			return c.sftpClient.Rename(remotePartPath, finalRemotePath)
 		}
 	}
@@ -927,4 +1097,20 @@ func getUniqueRemotePath(sftpClient *sftp.Client, originalPath string) string {
 	}
 
 	return originalPath
+}
+
+func (c *SSHClient) CreateEmptyFile(remotePath string) (*sftp.File, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.sftpClient == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+
+	file, err := c.sftpClient.Create(remotePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create empty file: %w", err)
+	}
+
+	return file, nil
 }

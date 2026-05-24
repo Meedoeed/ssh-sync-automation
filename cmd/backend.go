@@ -58,8 +58,9 @@ func runBackend(cmd *cobra.Command, args []string) {
 	serverService := service.NewServerService(serverRepo, statusRepo)
 	taskService := service.NewTaskService(taskRepo)
 	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")
+	schedulerLeaderRepo := postgres.NewSchedulerLeaderRepo(db.Pool)
 
-	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo)
+	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo, schedulerLeaderRepo)
 	rpcPath, rpcHandler := genconnect.NewBackendServiceHandler(rpcServer)
 
 	rpcMux := http.NewServeMux()
@@ -75,7 +76,7 @@ func runBackend(cmd *cobra.Command, args []string) {
 	go rpcServer.StartHeartbeatMonitor(context.Background())
 
 	healthHandler := handler.NewHealthHandler(db)
-	serverHandler := handler.NewServerHandler(serverService, nil)
+	serverHandler := handler.NewServerHandler(serverService)
 	taskHandler := handler.NewTaskHandler(taskService)
 
 	httpServer := server.NewHTTP(cfg, db, encryptor, serverService, taskService, syncService)

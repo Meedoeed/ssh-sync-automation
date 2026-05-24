@@ -28,6 +28,4 @@ func RegisterRoutes(
 	tasks := v1.Group("/tasks")
 	tasks.GET("", taskHandler.ListTasks)
 	tasks.GET("/:id", taskHandler.GetTask)
-
-	v1.GET("/workers/stats", serverHandler.GetWorkerStats)
 }

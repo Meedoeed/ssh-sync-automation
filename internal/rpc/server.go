@@ -14,16 +14,22 @@ import (
 )
 
 type BackendServer struct {
-	taskRepo       repository.TaskRepository
-	serverRepo     repository.ServerRepository
-	workerRegistry *WorkerRegistry
+	taskRepo            repository.TaskRepository
+	serverRepo          repository.ServerRepository
+	workerRegistry      *WorkerRegistry
+	schedulerLeaderRepo repository.SchedulerLeaderRepository
 }
 
-func NewBackendServer(taskRepo repository.TaskRepository, serverRepo repository.ServerRepository) *BackendServer {
+func NewBackendServer(
+	taskRepo repository.TaskRepository,
+	serverRepo repository.ServerRepository,
+	schedulerLeaderRepo repository.SchedulerLeaderRepository,
+) *BackendServer {
 	return &BackendServer{
-		taskRepo:       taskRepo,
-		serverRepo:     serverRepo,
-		workerRegistry: NewWorkerRegistry(),
+		taskRepo:            taskRepo,
+		serverRepo:          serverRepo,
+		workerRegistry:      NewWorkerRegistry(),
+		schedulerLeaderRepo: schedulerLeaderRepo,
 	}
 }
 
@@ -422,5 +428,67 @@ func (s *BackendServer) CheckTaskExists(ctx context.Context, req *connect.Reques
 
 	return connect.NewResponse(&gen.CheckTaskExistsResponse{
 		Exists: exists,
+	}), nil
+}
+
+func (s *BackendServer) TryBecomeLeader(ctx context.Context, req *connect.Request[gen.TryBecomeLeaderRequest]) (*connect.Response[gen.TryBecomeLeaderResponse], error) {
+	ttl := time.Duration(req.Msg.TtlSeconds) * time.Second
+
+	became, err := s.schedulerLeaderRepo.TryBecomeLeader(ctx, req.Msg.SchedulerId, ttl)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	leader, _ := s.schedulerLeaderRepo.GetLeader(ctx)
+	currentLeader := ""
+	if leader != nil {
+		currentLeader = leader.LeaderID
+	}
+
+	return connect.NewResponse(&gen.TryBecomeLeaderResponse{
+		IsLeader:        became,
+		CurrentLeaderId: currentLeader,
+	}), nil
+}
+
+func (s *BackendServer) RenewLeadership(ctx context.Context, req *connect.Request[gen.RenewLeadershipRequest]) (*connect.Response[gen.RenewLeadershipResponse], error) {
+	ttl := time.Duration(req.Msg.TtlSeconds) * time.Second
+
+	renewed, err := s.schedulerLeaderRepo.RenewLeader(ctx, req.Msg.SchedulerId, ttl)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&gen.RenewLeadershipResponse{
+		Success: renewed,
+	}), nil
+}
+
+func (s *BackendServer) ReleaseLeadership(ctx context.Context, req *connect.Request[gen.ReleaseLeadershipRequest]) (*connect.Response[gen.ReleaseLeadershipResponse], error) {
+	err := s.schedulerLeaderRepo.ReleaseLeader(ctx, req.Msg.SchedulerId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(&gen.ReleaseLeadershipResponse{
+		Success: true,
+	}), nil
+}
+
+func (s *BackendServer) GetLeader(ctx context.Context, req *connect.Request[gen.GetLeaderRequest]) (*connect.Response[gen.GetLeaderResponse], error) {
+	leader, err := s.schedulerLeaderRepo.GetLeader(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if leader == nil {
+		return connect.NewResponse(&gen.GetLeaderResponse{
+			LeaderId: "",
+		}), nil
+	}
+
+	return connect.NewResponse(&gen.GetLeaderResponse{
+		LeaderId:      leader.LeaderID,
+		LastHeartbeat: leader.LastHeartbeat.Format(time.RFC3339),
 	}), nil
 }

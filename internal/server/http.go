@@ -75,23 +75,3 @@ func (s *HTTPServer) SetValidator(v echo.Validator) {
 func (s *HTTPServer) GetEcho() *echo.Echo {
 	return s.echo
 }
-
-func (s *HTTPServer) GetServerService() *service.ServerService {
-	return s.serverService
-}
-
-func (s *HTTPServer) GetTaskService() *service.TaskService {
-	return s.taskService
-}
-
-func (s *HTTPServer) GetSyncService() *service.SyncService {
-	return s.syncService
-}
-
-func (s *HTTPServer) GetDB() *postgres.DB {
-	return s.db
-}
-
-func (s *HTTPServer) GetEncryptor() *encryption.Encryptor {
-	return s.encryptor
-}

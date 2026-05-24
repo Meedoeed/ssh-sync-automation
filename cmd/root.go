@@ -2,21 +2,27 @@ package cmd
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
+	"github.com/joho/godotenv"
+	"github.com/spf13/cobra"
+
 	"github.com/Meedoeed/ssh-sync-automation/internal/config"
+	"github.com/Meedoeed/ssh-sync-automation/internal/gen"
 	"github.com/Meedoeed/ssh-sync-automation/internal/handler"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/encryption"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
+	"github.com/Meedoeed/ssh-sync-automation/internal/rpc"
+	"github.com/Meedoeed/ssh-sync-automation/internal/runner"
 	"github.com/Meedoeed/ssh-sync-automation/internal/server"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
-	"github.com/Meedoeed/ssh-sync-automation/internal/worker"
-	"github.com/joho/godotenv"
-	"github.com/spf13/cobra"
+	"github.com/Meedoeed/ssh-sync-automation/proto/genconnect"
 )
 
 var rootCmd = &cobra.Command{
@@ -25,11 +31,11 @@ var rootCmd = &cobra.Command{
 	Long: `SSH Sync Automation Service — синхронизация файлов между серверами по SSH/SFTP.
 
 Режимы запуска:
-  ssh-sync-service              - Запуск всех компонентов (монолит)
+  ssh-sync-service              - Запуск всех компонентов (монолит через RPC)
   ssh-sync-service backend      - Запуск только backend API сервера
   ssh-sync-service scheduler    - Запуск планировщика задач
   ssh-sync-service worker       - Запуск worker для выполнения синхронизации`,
-	Run: runMonolith,
+	Run: runMonolithRPC,
 }
 
 func Execute() {
@@ -44,7 +50,7 @@ func init() {
 	rootCmd.AddCommand(workerCmd)
 }
 
-func runMonolith(cmd *cobra.Command, args []string) {
+func runMonolithRPC(cmd *cobra.Command, args []string) {
 	if err := godotenv.Load(); err != nil {
 		println("No .env file found")
 	}
@@ -54,7 +60,7 @@ func runMonolith(cmd *cobra.Command, args []string) {
 
 	logger.Init(cfg.Log.Level, true)
 	log := logger.Get()
-	log.Info().Msg("Starting SSH-SYNC-AUTOMATION service (monolith mode)")
+	log.Info().Msg("Starting SSH-SYNC-AUTOMATION in MONOLITH mode (RPC-based)")
 
 	encryptor := encryption.NewEncryptor(cfg.Encryption.Key)
 	ctx := context.Background()
@@ -68,27 +74,29 @@ func runMonolith(cmd *cobra.Command, args []string) {
 	serverRepo := postgres.NewServerRepo(db.Pool, encryptor)
 	taskRepo := postgres.NewTaskRepo(db.Pool)
 	statusRepo := postgres.NewServerStatusRepo(db.Pool)
+	schedulerLeaderRepo := postgres.NewSchedulerLeaderRepo(db.Pool) // добавить
 
 	serverService := service.NewServerService(serverRepo, statusRepo)
 	taskService := service.NewTaskService(taskRepo)
 	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")
 
-	poolConfig := &worker.PoolConfig{
-		Interval:    cfg.Sync.Interval,
-		SyncCfg:     &cfg.Sync,
-		ServerRepo:  serverRepo,
-		StatusRepo:  statusRepo,
-		SyncService: syncService,
-	}
-	workerPool := worker.NewPool(poolConfig)
+	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo, schedulerLeaderRepo) // исправлено
+	rpcPath, rpcHandler := genconnect.NewBackendServiceHandler(rpcServer)
 
-	if err := workerPool.Start(ctx); err != nil {
-		log.Fatal().Err(err).Msg("Failed to start worker pool")
-	}
-	defer workerPool.StopAll()
+	rpcMux := http.NewServeMux()
+	rpcMux.Handle(rpcPath, rpcHandler)
+
+	go func() {
+		log.Info().Msg("Starting RPC server on :8082")
+		if err := http.ListenAndServe(":8082", rpcMux); err != nil {
+			log.Fatal().Err(err).Msg("Failed to start RPC server")
+		}
+	}()
+
+	go rpcServer.StartHeartbeatMonitor(ctx)
 
 	healthHandler := handler.NewHealthHandler(db)
-	serverHandler := handler.NewServerHandler(serverService, workerPool)
+	serverHandler := handler.NewServerHandler(serverService)
 	taskHandler := handler.NewTaskHandler(taskService)
 
 	httpServer := server.NewHTTP(cfg, db, encryptor, serverService, taskService, syncService)
@@ -96,26 +104,55 @@ func runMonolith(cmd *cobra.Command, args []string) {
 	handler.RegisterRoutes(httpServer.GetEcho(), healthHandler, serverHandler, taskHandler)
 
 	go func() {
+		log.Info().Msg("Starting HTTP server on :8081")
 		if err := httpServer.Start(); err != nil {
 			log.Fatal().Err(err).Msg("Failed to start HTTP server")
 		}
 	}()
 
-	waitForShutdown(httpServer)
-	log.Info().Msg("Service stopped")
-}
+	rpcClient := genconnect.NewBackendServiceClient(
+		&http.Client{Timeout: 30 * time.Second},
+		"http://localhost:8082",
+	)
 
-func waitForShutdown(httpServer *server.HTTPServer) {
+	schedulerCtx, schedulerCancel := context.WithCancel(ctx)
+	go func() {
+		log.Info().Msg("Starting internal scheduler")
+		runner.RunSchedulerLoop(schedulerCtx, rpcClient, cfg, "./data")
+	}()
+
+	workerID := runner.GenerateWorkerID()
+	workerCtx, workerCancel := context.WithCancel(ctx)
+
+	_, err = rpcClient.RegisterWorker(ctx, connect.NewRequest(&gen.RegisterWorkerRequest{
+		WorkerId: workerID,
+	}))
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to register worker")
+	} else {
+		log.Info().Str("worker_id", workerID).Msg("Worker registered")
+	}
+
+	go func() {
+		log.Info().Str("worker_id", workerID).Msg("Starting internal worker")
+		go runner.RunHeartbeat(workerCtx, rpcClient, workerID)
+		runner.RunTaskLoop(workerCtx, rpcClient, workerID, cfg)
+	}()
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	log.Info().Msg("Shutting down monolith...")
+	schedulerCancel()
+	workerCancel()
+	time.Sleep(3 * time.Second)
 
-	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		logger.Get().Error().Err(err).Msg("HTTP server shutdown error")
-	}
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	httpServer.Shutdown(shutdownCtx)
+
+	log.Info().Msg("Monolith stopped")
 }
 
 func validateEncryption(cfg *config.Config) {

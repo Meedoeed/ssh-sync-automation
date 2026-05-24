@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
+	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
-	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/ssh"
 	"github.com/Meedoeed/ssh-sync-automation/internal/repository"
 	"github.com/google/uuid"
 )
@@ -36,7 +36,7 @@ func NewSyncService(
 	}
 }
 
-func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshClient ssh.SSHClientInterface) error {
+func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshClient infrastructure.SSHClientInterface) error {
 	server, err := s.serverRepo.GetByID(ctx, serverID)
 	if err != nil {
 		return fmt.Errorf("failed to get server: %w", err)
@@ -103,7 +103,7 @@ func (s *SyncService) SyncServer(ctx context.Context, serverID uuid.UUID, sshCli
 	return nil
 }
 
-func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, sshClient ssh.SSHClientInterface) error {
+func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, sshClient infrastructure.SSHClientInterface) error {
 	remotePath := "done/"
 	localPath := filepath.Join(s.baseLocalDir, "done", server.Name)
 
@@ -232,7 +232,7 @@ func (s *SyncService) syncDownload(ctx context.Context, server *domain.Server, s
 	return nil
 }
 
-func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, sshClient ssh.SSHClientInterface) error {
+func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, sshClient infrastructure.SSHClientInterface) error {
 	localPath := filepath.Join(s.baseLocalDir, "tasks", server.Name)
 	remotePath := "tasks/"
 
@@ -267,7 +267,6 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 		}
 
 		localFilePath := filepath.Join(localPath, file.Name())
-
 		remoteFilePath := s.getUniqueRemotePath(sshClient, remotePath, file.Name())
 
 		fileInfo, err := os.Stat(localFilePath)
@@ -371,37 +370,26 @@ func (s *SyncService) syncUpload(ctx context.Context, server *domain.Server, ssh
 	return nil
 }
 
-func (s *SyncService) getUniqueRemotePath(sshClient ssh.SSHClientInterface, dir, filename string) string {
+func (s *SyncService) getUniqueRemotePath(sshClient infrastructure.SSHClientInterface, dir, filename string) string {
 	ext := filepath.Ext(filename)
 	name := strings.TrimSuffix(filename, ext)
 	basePath := filepath.Join(dir, filename)
 
 	exists, err := s.remoteFileExists(sshClient, basePath)
 	if err == nil && !exists {
-		logger.Get().Debug().
-			Str("file", filename).
-			Msg("File does not exist on server, using original name")
 		return basePath
 	}
-
-	logger.Get().Debug().
-		Str("file", filename).
-		Msg("File already exists on server, looking for unique name")
 
 	for i := 1; i <= 1000; i++ {
 		newName := fmt.Sprintf("%s (%d)%s", name, i, ext)
 		newPath := filepath.Join(dir, newName)
 		exists, err := s.remoteFileExists(sshClient, newPath)
 		if err == nil && !exists {
-			logger.Get().Debug().
-				Str("original", filename).
-				Str("new", newName).
-				Msg("Found unique name for upload")
 			return newPath
 		}
 	}
 
-	return filepath.Join(dir, fmt.Sprintf("%s (999)%s", name, ext))
+	return filepath.Join(dir, fmt.Sprintf("%s_%d%s", name, 999, ext))
 }
 
 func (s *SyncService) getUniqueLocalPath(dir, filename string) string {
@@ -413,26 +401,18 @@ func (s *SyncService) getUniqueLocalPath(dir, filename string) string {
 		return basePath
 	}
 
-	logger.Get().Debug().
-		Str("file", filename).
-		Msg("File already exists locally, looking for unique name")
-
 	for i := 1; i <= 1000; i++ {
 		newName := fmt.Sprintf("%s (%d)%s", name, i, ext)
 		newPath := filepath.Join(dir, newName)
 		if _, err := os.Stat(newPath); os.IsNotExist(err) {
-			logger.Get().Debug().
-				Str("original", filename).
-				Str("new", newName).
-				Msg("Found unique name for download")
 			return newPath
 		}
 	}
 
-	return filepath.Join(dir, fmt.Sprintf("%s (999)%s", name, ext))
+	return filepath.Join(dir, fmt.Sprintf("%s_%d%s", name, 999, ext))
 }
 
-func (s *SyncService) remoteFileExists(sshClient ssh.SSHClientInterface, remotePath string) (bool, error) {
+func (s *SyncService) remoteFileExists(sshClient infrastructure.SSHClientInterface, remotePath string) (bool, error) {
 	_, err := sshClient.GetFileSize(remotePath)
 	if err != nil {
 		if strings.Contains(err.Error(), "file does not exist") || strings.Contains(err.Error(), "no such file") {
@@ -443,7 +423,7 @@ func (s *SyncService) remoteFileExists(sshClient ssh.SSHClientInterface, remoteP
 	return true, nil
 }
 
-func (s *SyncService) getRemoteFileSize(sshClient ssh.SSHClientInterface, remotePath string) int64 {
+func (s *SyncService) getRemoteFileSize(sshClient infrastructure.SSHClientInterface, remotePath string) int64 {
 	size, err := sshClient.GetFileSize(remotePath)
 	if err != nil {
 		logger.Get().Warn().

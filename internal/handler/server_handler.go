@@ -1,27 +1,23 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"strings"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
-	"github.com/Meedoeed/ssh-sync-automation/internal/worker"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
 type ServerHandler struct {
 	serverService *service.ServerService
-	workerPool    *worker.Pool
 }
 
-func NewServerHandler(serverService *service.ServerService, workerPool *worker.Pool) *ServerHandler {
+func NewServerHandler(serverService *service.ServerService) *ServerHandler {
 	return &ServerHandler{
 		serverService: serverService,
-		workerPool:    workerPool,
 	}
 }
 
@@ -121,69 +117,9 @@ func (h *ServerHandler) CreateServer(c echo.Context) error {
 		})
 	}
 
-	// Безопасное получение количества воркеров
-	currentWorkers := 0
-	if h.workerPool != nil {
-		currentWorkers = len(h.workerPool.ListWorkers())
-	}
 	logger.Get().Info().
-		Int("current_workers", currentWorkers).
 		Str("server_name", server.Name).
-		Msg("Current worker count before adding new server")
-
-	if server.IsActive && h.workerPool != nil {
-		freshServer, err := h.serverService.GetServer(c.Request().Context(), server.ID)
-		if err != nil {
-			logger.Get().Error().
-				Err(err).
-				Str("server_id", server.ID.String()).
-				Msg("Failed to load fresh server from DB")
-
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error":     "server created but failed to load fresh data: " + err.Error(),
-				"server_id": server.ID.String(),
-			})
-		}
-
-		if freshServer == nil {
-			logger.Get().Error().
-				Str("server_id", server.ID.String()).
-				Msg("Fresh server not found in DB")
-
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error":     "server created but fresh data not found",
-				"server_id": server.ID.String(),
-			})
-		}
-
-		logger.Get().Debug().
-			Str("server_name", freshServer.Name).
-			Bool("has_password", freshServer.Password != nil).
-			Msg("Loaded fresh server with decrypted password")
-
-		ctx := context.Background()
-
-		if err := h.workerPool.AddWorker(ctx, freshServer); err != nil {
-			logger.Get().Error().
-				Err(err).
-				Str("server_id", server.ID.String()).
-				Str("server_name", server.Name).
-				Msg("Failed to add worker for new server")
-
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error":     "server created but failed to start worker: " + err.Error(),
-				"server_id": server.ID.String(),
-			})
-		}
-
-		newWorkers := len(h.workerPool.ListWorkers())
-		logger.Get().Info().
-			Int("previous_workers", currentWorkers).
-			Int("new_workers", newWorkers).
-			Int("added_count", newWorkers-currentWorkers).
-			Str("server_name", server.Name).
-			Msg("Worker added successfully. Worker pool size updated")
-	}
+		Msg("Server created successfully")
 
 	response := ServerResponse{
 		ID:        server.ID.String(),
@@ -203,33 +139,6 @@ func (h *ServerHandler) CreateServer(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, response)
-}
-
-func (h *ServerHandler) GetWorkerStats(c echo.Context) error {
-	if h.workerPool == nil {
-		return c.JSON(http.StatusServiceUnavailable, map[string]string{
-			"error": "worker pool not initialized",
-		})
-	}
-
-	stats := h.workerPool.GetStats()
-
-	if workers, ok := stats["workers"].([]map[string]interface{}); ok {
-		for i, workerStats := range workers {
-			if serverIDStr, ok := workerStats["server_id"].(string); ok {
-				serverID, err := uuid.Parse(serverIDStr)
-				if err == nil {
-					server, err := h.serverService.GetServer(c.Request().Context(), serverID)
-					if err == nil && server != nil && server.Name != workerStats["server_name"] {
-						workers[i]["server_name"] = server.Name
-					}
-				}
-			}
-		}
-		stats["workers"] = workers
-	}
-
-	return c.JSON(http.StatusOK, stats)
 }
 
 func (h *ServerHandler) ListServers(c echo.Context) error {
@@ -324,15 +233,7 @@ func (h *ServerHandler) DeleteServer(c echo.Context) error {
 			Msg("Server is nil")
 	}
 
-	if h.workerPool != nil {
-		if err := h.workerPool.RemoveWorker(serverID); err != nil {
-			logger.Get().Debug().
-				Err(err).
-				Str("server_id", id).
-				Msg("Worker removal skipped (worker may not exist)")
-		}
-	}
-
+	// Удаляем сервер из БД
 	if err := h.serverService.DeleteServer(ctx, serverID); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to delete server: " + err.Error(),
@@ -386,9 +287,6 @@ func (h *ServerHandler) UpdateServer(c echo.Context) error {
 		})
 	}
 
-	oldName := existingServer.Name
-	wasActive := existingServer.IsActive
-
 	if req.Name != "" {
 		existingServer.Name = req.Name
 	}
@@ -436,77 +334,10 @@ func (h *ServerHandler) UpdateServer(c echo.Context) error {
 		})
 	}
 
-	needsRestart := req.Name != "" || req.Host != "" || req.Port != 0 || req.Username != "" ||
-		req.AuthType != "" || req.Password != nil || req.PrivateKey != nil
-
-	if existingServer.IsActive && needsRestart && h.workerPool != nil {
-		logger.Get().Info().
-			Str("server_id", serverID.String()).
-			Str("old_name", oldName).
-			Str("new_name", existingServer.Name).
-			Msg("Server configuration changed, restarting worker")
-
-		go func() {
-			if err := h.workerPool.RemoveWorker(serverID); err != nil {
-				logger.Get().Warn().
-					Err(err).
-					Str("server_id", serverID.String()).
-					Msg("Failed to remove old worker")
-			}
-
-			freshServer, err := h.serverService.GetServer(context.Background(), serverID)
-			if err != nil {
-				logger.Get().Error().
-					Err(err).
-					Str("server_id", serverID.String()).
-					Msg("Failed to get fresh server data after update")
-				return
-			}
-
-			if err := h.workerPool.AddWorker(context.Background(), freshServer); err != nil {
-				logger.Get().Error().
-					Err(err).
-					Str("server_id", serverID.String()).
-					Msg("Failed to add updated worker")
-			} else {
-				logger.Get().Info().
-					Str("server_id", serverID.String()).
-					Str("server_name", freshServer.Name).
-					Msg("Worker restarted successfully after update")
-			}
-		}()
-	} else if req.IsActive != nil && *req.IsActive != wasActive && h.workerPool != nil {
-		if *req.IsActive {
-			logger.Get().Info().
-				Str("server_name", existingServer.Name).
-				Msg("Server activated, adding worker")
-
-			go func() {
-				freshServer, err := h.serverService.GetServer(context.Background(), serverID)
-				if err == nil && freshServer != nil {
-					if err := h.workerPool.AddWorker(context.Background(), freshServer); err != nil {
-						logger.Get().Error().
-							Err(err).
-							Str("server_name", existingServer.Name).
-							Msg("Failed to add worker after activation")
-					}
-				}
-			}()
-		} else {
-			logger.Get().Info().
-				Str("server_name", existingServer.Name).
-				Msg("Server deactivated, removing worker")
-
-			go func() {
-				if err := h.workerPool.RemoveWorker(serverID); err != nil {
-					logger.Get().Warn().
-						Err(err).
-						Str("server_name", existingServer.Name).
-						Msg("Failed to remove worker after deactivation")
-				}
-			}()
-		}
-	}
+	logger.Get().Info().
+		Str("server_id", serverID.String()).
+		Str("server_name", existingServer.Name).
+		Msg("Server updated successfully")
 
 	response := ServerResponse{
 		ID:        existingServer.ID.String(),
