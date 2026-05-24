@@ -11,6 +11,7 @@ import (
 	"github.com/Meedoeed/ssh-sync-automation/internal/gen"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	"github.com/Meedoeed/ssh-sync-automation/internal/repository"
+	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 )
 
 type BackendServer struct {
@@ -491,4 +492,32 @@ func (s *BackendServer) GetLeader(ctx context.Context, req *connect.Request[gen.
 		LeaderId:      leader.LeaderID,
 		LastHeartbeat: leader.LastHeartbeat.Format(time.RFC3339),
 	}), nil
+}
+
+func (s *BackendServer) StartCleanupScheduler(ctx context.Context, taskService *service.TaskService, interval time.Duration, retention time.Duration) {
+	ticker := time.NewTicker(interval)
+	go func() {
+		logger.Get().Info().
+			Dur("interval", interval).
+			Dur("retention", retention).
+			Msg("Cleanup scheduler started")
+
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Get().Debug().Msg("Cleanup scheduler stopped")
+				return
+			case <-ticker.C:
+				count, err := taskService.CleanupOldTasks(ctx, retention)
+				if err != nil {
+					logger.Get().Error().Err(err).Msg("Failed to cleanup old tasks")
+				} else if count > 0 {
+					logger.Get().Info().
+						Int64("deleted", count).
+						Dur("retention", retention).
+						Msg("Old tasks cleaned up")
+				}
+			}
+		}
+	}()
 }

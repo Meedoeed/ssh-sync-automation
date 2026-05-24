@@ -63,6 +63,10 @@ func runBackend(cmd *cobra.Command, args []string) {
 	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo, schedulerLeaderRepo)
 	rpcPath, rpcHandler := genconnect.NewBackendServiceHandler(rpcServer)
 
+	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
+	rpcServer.StartCleanupScheduler(cleanupCtx, taskService, 6*time.Hour, 7*24*time.Hour)
+	defer cleanupCancel()
+
 	rpcMux := http.NewServeMux()
 	rpcMux.Handle(rpcPath, rpcHandler)
 
