@@ -1605,6 +1605,1322 @@ func (x *GetLeaderResponse) GetLastHeartbeat() string {
 	return ""
 }
 
+type ListServersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ActiveOnly    bool                   `protobuf:"varint,1,opt,name=active_only,json=activeOnly,proto3" json:"active_only,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListServersRequest) Reset() {
+	*x = ListServersRequest{}
+	mi := &file_proto_service_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListServersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListServersRequest) ProtoMessage() {}
+
+func (x *ListServersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListServersRequest.ProtoReflect.Descriptor instead.
+func (*ListServersRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ListServersRequest) GetActiveOnly() bool {
+	if x != nil {
+		return x.ActiveOnly
+	}
+	return false
+}
+
+type ListServersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Servers       []*ServerProto         `protobuf:"bytes,1,rep,name=servers,proto3" json:"servers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListServersResponse) Reset() {
+	*x = ListServersResponse{}
+	mi := &file_proto_service_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListServersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListServersResponse) ProtoMessage() {}
+
+func (x *ListServersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListServersResponse.ProtoReflect.Descriptor instead.
+func (*ListServersResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ListServersResponse) GetServers() []*ServerProto {
+	if x != nil {
+		return x.Servers
+	}
+	return nil
+}
+
+type GetServerByIdRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetServerByIdRequest) Reset() {
+	*x = GetServerByIdRequest{}
+	mi := &file_proto_service_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetServerByIdRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetServerByIdRequest) ProtoMessage() {}
+
+func (x *GetServerByIdRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetServerByIdRequest.ProtoReflect.Descriptor instead.
+func (*GetServerByIdRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *GetServerByIdRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+type GetServerByIdResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Server        *ServerProto           `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetServerByIdResponse) Reset() {
+	*x = GetServerByIdResponse{}
+	mi := &file_proto_service_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetServerByIdResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetServerByIdResponse) ProtoMessage() {}
+
+func (x *GetServerByIdResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetServerByIdResponse.ProtoReflect.Descriptor instead.
+func (*GetServerByIdResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *GetServerByIdResponse) GetServer() *ServerProto {
+	if x != nil {
+		return x.Server
+	}
+	return nil
+}
+
+type CreateServerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Host          string                 `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`
+	Port          int32                  `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
+	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
+	AuthType      string                 `protobuf:"bytes,5,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"`
+	Password      *string                `protobuf:"bytes,6,opt,name=password,proto3,oneof" json:"password,omitempty"`
+	PrivateKey    *string                `protobuf:"bytes,7,opt,name=private_key,json=privateKey,proto3,oneof" json:"private_key,omitempty"`
+	IsActive      bool                   `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateServerRequest) Reset() {
+	*x = CreateServerRequest{}
+	mi := &file_proto_service_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateServerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateServerRequest) ProtoMessage() {}
+
+func (x *CreateServerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateServerRequest.ProtoReflect.Descriptor instead.
+func (*CreateServerRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *CreateServerRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateServerRequest) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *CreateServerRequest) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *CreateServerRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *CreateServerRequest) GetAuthType() string {
+	if x != nil {
+		return x.AuthType
+	}
+	return ""
+}
+
+func (x *CreateServerRequest) GetPassword() string {
+	if x != nil && x.Password != nil {
+		return *x.Password
+	}
+	return ""
+}
+
+func (x *CreateServerRequest) GetPrivateKey() string {
+	if x != nil && x.PrivateKey != nil {
+		return *x.PrivateKey
+	}
+	return ""
+}
+
+func (x *CreateServerRequest) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+type CreateServerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Server        *ServerProto           `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateServerResponse) Reset() {
+	*x = CreateServerResponse{}
+	mi := &file_proto_service_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateServerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateServerResponse) ProtoMessage() {}
+
+func (x *CreateServerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateServerResponse.ProtoReflect.Descriptor instead.
+func (*CreateServerResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *CreateServerResponse) GetServer() *ServerProto {
+	if x != nil {
+		return x.Server
+	}
+	return nil
+}
+
+type UpdateServerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Host          *string                `protobuf:"bytes,3,opt,name=host,proto3,oneof" json:"host,omitempty"`
+	Port          *int32                 `protobuf:"varint,4,opt,name=port,proto3,oneof" json:"port,omitempty"`
+	Username      *string                `protobuf:"bytes,5,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	AuthType      *string                `protobuf:"bytes,6,opt,name=auth_type,json=authType,proto3,oneof" json:"auth_type,omitempty"`
+	Password      *string                `protobuf:"bytes,7,opt,name=password,proto3,oneof" json:"password,omitempty"`
+	PrivateKey    *string                `protobuf:"bytes,8,opt,name=private_key,json=privateKey,proto3,oneof" json:"private_key,omitempty"`
+	IsActive      *bool                  `protobuf:"varint,9,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateServerRequest) Reset() {
+	*x = UpdateServerRequest{}
+	mi := &file_proto_service_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateServerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateServerRequest) ProtoMessage() {}
+
+func (x *UpdateServerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateServerRequest.ProtoReflect.Descriptor instead.
+func (*UpdateServerRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *UpdateServerRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *UpdateServerRequest) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *UpdateServerRequest) GetHost() string {
+	if x != nil && x.Host != nil {
+		return *x.Host
+	}
+	return ""
+}
+
+func (x *UpdateServerRequest) GetPort() int32 {
+	if x != nil && x.Port != nil {
+		return *x.Port
+	}
+	return 0
+}
+
+func (x *UpdateServerRequest) GetUsername() string {
+	if x != nil && x.Username != nil {
+		return *x.Username
+	}
+	return ""
+}
+
+func (x *UpdateServerRequest) GetAuthType() string {
+	if x != nil && x.AuthType != nil {
+		return *x.AuthType
+	}
+	return ""
+}
+
+func (x *UpdateServerRequest) GetPassword() string {
+	if x != nil && x.Password != nil {
+		return *x.Password
+	}
+	return ""
+}
+
+func (x *UpdateServerRequest) GetPrivateKey() string {
+	if x != nil && x.PrivateKey != nil {
+		return *x.PrivateKey
+	}
+	return ""
+}
+
+func (x *UpdateServerRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
+}
+
+type UpdateServerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Server        *ServerProto           `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateServerResponse) Reset() {
+	*x = UpdateServerResponse{}
+	mi := &file_proto_service_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateServerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateServerResponse) ProtoMessage() {}
+
+func (x *UpdateServerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateServerResponse.ProtoReflect.Descriptor instead.
+func (*UpdateServerResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *UpdateServerResponse) GetServer() *ServerProto {
+	if x != nil {
+		return x.Server
+	}
+	return nil
+}
+
+type DeleteServerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteServerRequest) Reset() {
+	*x = DeleteServerRequest{}
+	mi := &file_proto_service_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteServerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteServerRequest) ProtoMessage() {}
+
+func (x *DeleteServerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteServerRequest.ProtoReflect.Descriptor instead.
+func (*DeleteServerRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *DeleteServerRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+type DeleteServerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteServerResponse) Reset() {
+	*x = DeleteServerResponse{}
+	mi := &file_proto_service_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteServerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteServerResponse) ProtoMessage() {}
+
+func (x *DeleteServerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteServerResponse.ProtoReflect.Descriptor instead.
+func (*DeleteServerResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *DeleteServerResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type ListTasksRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      *string                `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3,oneof" json:"server_id,omitempty"`
+	Status        *string                `protobuf:"bytes,2,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTasksRequest) Reset() {
+	*x = ListTasksRequest{}
+	mi := &file_proto_service_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTasksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTasksRequest) ProtoMessage() {}
+
+func (x *ListTasksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTasksRequest.ProtoReflect.Descriptor instead.
+func (*ListTasksRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ListTasksRequest) GetServerId() string {
+	if x != nil && x.ServerId != nil {
+		return *x.ServerId
+	}
+	return ""
+}
+
+func (x *ListTasksRequest) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
+func (x *ListTasksRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type ListTasksResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tasks         []*TaskProto           `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTasksResponse) Reset() {
+	*x = ListTasksResponse{}
+	mi := &file_proto_service_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTasksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTasksResponse) ProtoMessage() {}
+
+func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTasksResponse.ProtoReflect.Descriptor instead.
+func (*ListTasksResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ListTasksResponse) GetTasks() []*TaskProto {
+	if x != nil {
+		return x.Tasks
+	}
+	return nil
+}
+
+type GetTaskByIdRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskByIdRequest) Reset() {
+	*x = GetTaskByIdRequest{}
+	mi := &file_proto_service_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskByIdRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskByIdRequest) ProtoMessage() {}
+
+func (x *GetTaskByIdRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskByIdRequest.ProtoReflect.Descriptor instead.
+func (*GetTaskByIdRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *GetTaskByIdRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+type GetTaskByIdResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Task          *TaskProto             `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskByIdResponse) Reset() {
+	*x = GetTaskByIdResponse{}
+	mi := &file_proto_service_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskByIdResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskByIdResponse) ProtoMessage() {}
+
+func (x *GetTaskByIdResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskByIdResponse.ProtoReflect.Descriptor instead.
+func (*GetTaskByIdResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *GetTaskByIdResponse) GetTask() *TaskProto {
+	if x != nil {
+		return x.Task
+	}
+	return nil
+}
+
+type GetWorkerStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkerStatsRequest) Reset() {
+	*x = GetWorkerStatsRequest{}
+	mi := &file_proto_service_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkerStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkerStatsRequest) ProtoMessage() {}
+
+func (x *GetWorkerStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkerStatsRequest.ProtoReflect.Descriptor instead.
+func (*GetWorkerStatsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{44}
+}
+
+type GetWorkerStatsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TotalWorkers  int32                  `protobuf:"varint,1,opt,name=total_workers,json=totalWorkers,proto3" json:"total_workers,omitempty"`
+	Workers       []*WorkerStatProto     `protobuf:"bytes,2,rep,name=workers,proto3" json:"workers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkerStatsResponse) Reset() {
+	*x = GetWorkerStatsResponse{}
+	mi := &file_proto_service_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkerStatsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkerStatsResponse) ProtoMessage() {}
+
+func (x *GetWorkerStatsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkerStatsResponse.ProtoReflect.Descriptor instead.
+func (*GetWorkerStatsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *GetWorkerStatsResponse) GetTotalWorkers() int32 {
+	if x != nil {
+		return x.TotalWorkers
+	}
+	return 0
+}
+
+func (x *GetWorkerStatsResponse) GetWorkers() []*WorkerStatProto {
+	if x != nil {
+		return x.Workers
+	}
+	return nil
+}
+
+type HealthCheckRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthCheckRequest) Reset() {
+	*x = HealthCheckRequest{}
+	mi := &file_proto_service_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthCheckRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthCheckRequest) ProtoMessage() {}
+
+func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
+func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{46}
+}
+
+type HealthCheckResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthCheckResponse) Reset() {
+	*x = HealthCheckResponse{}
+	mi := &file_proto_service_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthCheckResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthCheckResponse) ProtoMessage() {}
+
+func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
+func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *HealthCheckResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type ServerProto struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Host          string                 `protobuf:"bytes,3,opt,name=host,proto3" json:"host,omitempty"`
+	Port          int32                  `protobuf:"varint,4,opt,name=port,proto3" json:"port,omitempty"`
+	Username      string                 `protobuf:"bytes,5,opt,name=username,proto3" json:"username,omitempty"`
+	AuthType      string                 `protobuf:"bytes,6,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"`
+	Password      *string                `protobuf:"bytes,7,opt,name=password,proto3,oneof" json:"password,omitempty"`
+	PrivateKey    *string                `protobuf:"bytes,8,opt,name=private_key,json=privateKey,proto3,oneof" json:"private_key,omitempty"`
+	IsActive      bool                   `protobuf:"varint,9,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     string                 `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	LastSeen      *string                `protobuf:"bytes,12,opt,name=last_seen,json=lastSeen,proto3,oneof" json:"last_seen,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServerProto) Reset() {
+	*x = ServerProto{}
+	mi := &file_proto_service_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerProto) ProtoMessage() {}
+
+func (x *ServerProto) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerProto.ProtoReflect.Descriptor instead.
+func (*ServerProto) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *ServerProto) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ServerProto) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ServerProto) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *ServerProto) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *ServerProto) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *ServerProto) GetAuthType() string {
+	if x != nil {
+		return x.AuthType
+	}
+	return ""
+}
+
+func (x *ServerProto) GetPassword() string {
+	if x != nil && x.Password != nil {
+		return *x.Password
+	}
+	return ""
+}
+
+func (x *ServerProto) GetPrivateKey() string {
+	if x != nil && x.PrivateKey != nil {
+		return *x.PrivateKey
+	}
+	return ""
+}
+
+func (x *ServerProto) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *ServerProto) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *ServerProto) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *ServerProto) GetLastSeen() string {
+	if x != nil && x.LastSeen != nil {
+		return *x.LastSeen
+	}
+	return ""
+}
+
+type TaskProto struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ServerId         string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	Direction        string                 `protobuf:"bytes,3,opt,name=direction,proto3" json:"direction,omitempty"`
+	FileName         string                 `protobuf:"bytes,4,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	RemotePath       string                 `protobuf:"bytes,5,opt,name=remote_path,json=remotePath,proto3" json:"remote_path,omitempty"`
+	LocalPath        string                 `protobuf:"bytes,6,opt,name=local_path,json=localPath,proto3" json:"local_path,omitempty"`
+	FileSize         int64                  `protobuf:"varint,7,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`
+	BytesTransferred int64                  `protobuf:"varint,8,opt,name=bytes_transferred,json=bytesTransferred,proto3" json:"bytes_transferred,omitempty"`
+	Progress         float64                `protobuf:"fixed64,9,opt,name=progress,proto3" json:"progress,omitempty"`
+	Status           string                 `protobuf:"bytes,10,opt,name=status,proto3" json:"status,omitempty"`
+	AttemptCount     int32                  `protobuf:"varint,11,opt,name=attempt_count,json=attemptCount,proto3" json:"attempt_count,omitempty"`
+	MaxAttempts      int32                  `protobuf:"varint,12,opt,name=max_attempts,json=maxAttempts,proto3" json:"max_attempts,omitempty"`
+	ErrorMessage     *string                `protobuf:"bytes,13,opt,name=error_message,json=errorMessage,proto3,oneof" json:"error_message,omitempty"`
+	StartedAt        *string                `protobuf:"bytes,14,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	CompletedAt      *string                `protobuf:"bytes,15,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	CreatedAt        string                 `protobuf:"bytes,16,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt        string                 `protobuf:"bytes,17,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *TaskProto) Reset() {
+	*x = TaskProto{}
+	mi := &file_proto_service_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaskProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaskProto) ProtoMessage() {}
+
+func (x *TaskProto) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaskProto.ProtoReflect.Descriptor instead.
+func (*TaskProto) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *TaskProto) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TaskProto) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *TaskProto) GetDirection() string {
+	if x != nil {
+		return x.Direction
+	}
+	return ""
+}
+
+func (x *TaskProto) GetFileName() string {
+	if x != nil {
+		return x.FileName
+	}
+	return ""
+}
+
+func (x *TaskProto) GetRemotePath() string {
+	if x != nil {
+		return x.RemotePath
+	}
+	return ""
+}
+
+func (x *TaskProto) GetLocalPath() string {
+	if x != nil {
+		return x.LocalPath
+	}
+	return ""
+}
+
+func (x *TaskProto) GetFileSize() int64 {
+	if x != nil {
+		return x.FileSize
+	}
+	return 0
+}
+
+func (x *TaskProto) GetBytesTransferred() int64 {
+	if x != nil {
+		return x.BytesTransferred
+	}
+	return 0
+}
+
+func (x *TaskProto) GetProgress() float64 {
+	if x != nil {
+		return x.Progress
+	}
+	return 0
+}
+
+func (x *TaskProto) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *TaskProto) GetAttemptCount() int32 {
+	if x != nil {
+		return x.AttemptCount
+	}
+	return 0
+}
+
+func (x *TaskProto) GetMaxAttempts() int32 {
+	if x != nil {
+		return x.MaxAttempts
+	}
+	return 0
+}
+
+func (x *TaskProto) GetErrorMessage() string {
+	if x != nil && x.ErrorMessage != nil {
+		return *x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *TaskProto) GetStartedAt() string {
+	if x != nil && x.StartedAt != nil {
+		return *x.StartedAt
+	}
+	return ""
+}
+
+func (x *TaskProto) GetCompletedAt() string {
+	if x != nil && x.CompletedAt != nil {
+		return *x.CompletedAt
+	}
+	return ""
+}
+
+func (x *TaskProto) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *TaskProto) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
+type WorkerStatProto struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	ServerName    string                 `protobuf:"bytes,2,opt,name=server_name,json=serverName,proto3" json:"server_name,omitempty"`
+	State         string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	LastSync      string                 `protobuf:"bytes,4,opt,name=last_sync,json=lastSync,proto3" json:"last_sync,omitempty"`
+	SyncCount     int64                  `protobuf:"varint,5,opt,name=sync_count,json=syncCount,proto3" json:"sync_count,omitempty"`
+	ErrorCount    int64                  `protobuf:"varint,6,opt,name=error_count,json=errorCount,proto3" json:"error_count,omitempty"`
+	LastError     string                 `protobuf:"bytes,7,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkerStatProto) Reset() {
+	*x = WorkerStatProto{}
+	mi := &file_proto_service_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkerStatProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkerStatProto) ProtoMessage() {}
+
+func (x *WorkerStatProto) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkerStatProto.ProtoReflect.Descriptor instead.
+func (*WorkerStatProto) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *WorkerStatProto) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *WorkerStatProto) GetServerName() string {
+	if x != nil {
+		return x.ServerName
+	}
+	return ""
+}
+
+func (x *WorkerStatProto) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *WorkerStatProto) GetLastSync() string {
+	if x != nil {
+		return x.LastSync
+	}
+	return ""
+}
+
+func (x *WorkerStatProto) GetSyncCount() int64 {
+	if x != nil {
+		return x.SyncCount
+	}
+	return 0
+}
+
+func (x *WorkerStatProto) GetErrorCount() int64 {
+	if x != nil {
+		return x.ErrorCount
+	}
+	return 0
+}
+
+func (x *WorkerStatProto) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
 var File_proto_service_proto protoreflect.FileDescriptor
 
 const file_proto_service_proto_rawDesc = "" +
@@ -1711,7 +3027,137 @@ const file_proto_service_proto_rawDesc = "" +
 	"\x10GetLeaderRequest\"W\n" +
 	"\x11GetLeaderResponse\x12\x1b\n" +
 	"\tleader_id\x18\x01 \x01(\tR\bleaderId\x12%\n" +
-	"\x0elast_heartbeat\x18\x02 \x01(\tR\rlastHeartbeat2\xce\a\n" +
+	"\x0elast_heartbeat\x18\x02 \x01(\tR\rlastHeartbeat\"5\n" +
+	"\x12ListServersRequest\x12\x1f\n" +
+	"\vactive_only\x18\x01 \x01(\bR\n" +
+	"activeOnly\"A\n" +
+	"\x13ListServersResponse\x12*\n" +
+	"\aservers\x18\x01 \x03(\v2\x10.rpc.ServerProtoR\aservers\"3\n" +
+	"\x14GetServerByIdRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\"A\n" +
+	"\x15GetServerByIdResponse\x12(\n" +
+	"\x06server\x18\x01 \x01(\v2\x10.rpc.ServerProtoR\x06server\"\x8b\x02\n" +
+	"\x13CreateServerRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04host\x18\x02 \x01(\tR\x04host\x12\x12\n" +
+	"\x04port\x18\x03 \x01(\x05R\x04port\x12\x1a\n" +
+	"\busername\x18\x04 \x01(\tR\busername\x12\x1b\n" +
+	"\tauth_type\x18\x05 \x01(\tR\bauthType\x12\x1f\n" +
+	"\bpassword\x18\x06 \x01(\tH\x00R\bpassword\x88\x01\x01\x12$\n" +
+	"\vprivate_key\x18\a \x01(\tH\x01R\n" +
+	"privateKey\x88\x01\x01\x12\x1b\n" +
+	"\tis_active\x18\b \x01(\bR\bisActiveB\v\n" +
+	"\t_passwordB\x0e\n" +
+	"\f_private_key\"@\n" +
+	"\x14CreateServerResponse\x12(\n" +
+	"\x06server\x18\x01 \x01(\v2\x10.rpc.ServerProtoR\x06server\"\x8a\x03\n" +
+	"\x13UpdateServerRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x17\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
+	"\x04host\x18\x03 \x01(\tH\x01R\x04host\x88\x01\x01\x12\x17\n" +
+	"\x04port\x18\x04 \x01(\x05H\x02R\x04port\x88\x01\x01\x12\x1f\n" +
+	"\busername\x18\x05 \x01(\tH\x03R\busername\x88\x01\x01\x12 \n" +
+	"\tauth_type\x18\x06 \x01(\tH\x04R\bauthType\x88\x01\x01\x12\x1f\n" +
+	"\bpassword\x18\a \x01(\tH\x05R\bpassword\x88\x01\x01\x12$\n" +
+	"\vprivate_key\x18\b \x01(\tH\x06R\n" +
+	"privateKey\x88\x01\x01\x12 \n" +
+	"\tis_active\x18\t \x01(\bH\aR\bisActive\x88\x01\x01B\a\n" +
+	"\x05_nameB\a\n" +
+	"\x05_hostB\a\n" +
+	"\x05_portB\v\n" +
+	"\t_usernameB\f\n" +
+	"\n" +
+	"_auth_typeB\v\n" +
+	"\t_passwordB\x0e\n" +
+	"\f_private_keyB\f\n" +
+	"\n" +
+	"_is_active\"@\n" +
+	"\x14UpdateServerResponse\x12(\n" +
+	"\x06server\x18\x01 \x01(\v2\x10.rpc.ServerProtoR\x06server\"2\n" +
+	"\x13DeleteServerRequest\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\"0\n" +
+	"\x14DeleteServerResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x80\x01\n" +
+	"\x10ListTasksRequest\x12 \n" +
+	"\tserver_id\x18\x01 \x01(\tH\x00R\bserverId\x88\x01\x01\x12\x1b\n" +
+	"\x06status\x18\x02 \x01(\tH\x01R\x06status\x88\x01\x01\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limitB\f\n" +
+	"\n" +
+	"_server_idB\t\n" +
+	"\a_status\"9\n" +
+	"\x11ListTasksResponse\x12$\n" +
+	"\x05tasks\x18\x01 \x03(\v2\x0e.rpc.TaskProtoR\x05tasks\"-\n" +
+	"\x12GetTaskByIdRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\"9\n" +
+	"\x13GetTaskByIdResponse\x12\"\n" +
+	"\x04task\x18\x01 \x01(\v2\x0e.rpc.TaskProtoR\x04task\"\x17\n" +
+	"\x15GetWorkerStatsRequest\"m\n" +
+	"\x16GetWorkerStatsResponse\x12#\n" +
+	"\rtotal_workers\x18\x01 \x01(\x05R\ftotalWorkers\x12.\n" +
+	"\aworkers\x18\x02 \x03(\v2\x14.rpc.WorkerStatProtoR\aworkers\"\x14\n" +
+	"\x12HealthCheckRequest\"-\n" +
+	"\x13HealthCheckResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\"\x81\x03\n" +
+	"\vServerProto\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04host\x18\x03 \x01(\tR\x04host\x12\x12\n" +
+	"\x04port\x18\x04 \x01(\x05R\x04port\x12\x1a\n" +
+	"\busername\x18\x05 \x01(\tR\busername\x12\x1b\n" +
+	"\tauth_type\x18\x06 \x01(\tR\bauthType\x12\x1f\n" +
+	"\bpassword\x18\a \x01(\tH\x00R\bpassword\x88\x01\x01\x12$\n" +
+	"\vprivate_key\x18\b \x01(\tH\x01R\n" +
+	"privateKey\x88\x01\x01\x12\x1b\n" +
+	"\tis_active\x18\t \x01(\bR\bisActive\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\n" +
+	" \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\v \x01(\tR\tupdatedAt\x12 \n" +
+	"\tlast_seen\x18\f \x01(\tH\x02R\blastSeen\x88\x01\x01B\v\n" +
+	"\t_passwordB\x0e\n" +
+	"\f_private_keyB\f\n" +
+	"\n" +
+	"_last_seen\"\xdf\x04\n" +
+	"\tTaskProto\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x1c\n" +
+	"\tdirection\x18\x03 \x01(\tR\tdirection\x12\x1b\n" +
+	"\tfile_name\x18\x04 \x01(\tR\bfileName\x12\x1f\n" +
+	"\vremote_path\x18\x05 \x01(\tR\n" +
+	"remotePath\x12\x1d\n" +
+	"\n" +
+	"local_path\x18\x06 \x01(\tR\tlocalPath\x12\x1b\n" +
+	"\tfile_size\x18\a \x01(\x03R\bfileSize\x12+\n" +
+	"\x11bytes_transferred\x18\b \x01(\x03R\x10bytesTransferred\x12\x1a\n" +
+	"\bprogress\x18\t \x01(\x01R\bprogress\x12\x16\n" +
+	"\x06status\x18\n" +
+	" \x01(\tR\x06status\x12#\n" +
+	"\rattempt_count\x18\v \x01(\x05R\fattemptCount\x12!\n" +
+	"\fmax_attempts\x18\f \x01(\x05R\vmaxAttempts\x12(\n" +
+	"\rerror_message\x18\r \x01(\tH\x00R\ferrorMessage\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"started_at\x18\x0e \x01(\tH\x01R\tstartedAt\x88\x01\x01\x12&\n" +
+	"\fcompleted_at\x18\x0f \x01(\tH\x02R\vcompletedAt\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x10 \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x11 \x01(\tR\tupdatedAtB\x10\n" +
+	"\x0e_error_messageB\r\n" +
+	"\v_started_atB\x0f\n" +
+	"\r_completed_at\"\xe1\x01\n" +
+	"\x0fWorkerStatProto\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x1f\n" +
+	"\vserver_name\x18\x02 \x01(\tR\n" +
+	"serverName\x12\x14\n" +
+	"\x05state\x18\x03 \x01(\tR\x05state\x12\x1b\n" +
+	"\tlast_sync\x18\x04 \x01(\tR\blastSync\x12\x1d\n" +
+	"\n" +
+	"sync_count\x18\x05 \x01(\x03R\tsyncCount\x12\x1f\n" +
+	"\verror_count\x18\x06 \x01(\x03R\n" +
+	"errorCount\x12\x1d\n" +
+	"\n" +
+	"last_error\x18\a \x01(\tR\tlastError2\xb2\f\n" +
 	"\x0eBackendService\x12I\n" +
 	"\x0eRegisterWorker\x12\x1a.rpc.RegisterWorkerRequest\x1a\x1b.rpc.RegisterWorkerResponse\x12:\n" +
 	"\tHeartbeat\x12\x15.rpc.HeartbeatRequest\x1a\x16.rpc.HeartbeatResponse\x124\n" +
@@ -1728,7 +3174,16 @@ const file_proto_service_proto_rawDesc = "" +
 	"\x0fTryBecomeLeader\x12\x1b.rpc.TryBecomeLeaderRequest\x1a\x1c.rpc.TryBecomeLeaderResponse\x12L\n" +
 	"\x0fRenewLeadership\x12\x1b.rpc.RenewLeadershipRequest\x1a\x1c.rpc.RenewLeadershipResponse\x12R\n" +
 	"\x11ReleaseLeadership\x12\x1d.rpc.ReleaseLeadershipRequest\x1a\x1e.rpc.ReleaseLeadershipResponse\x12:\n" +
-	"\tGetLeader\x12\x15.rpc.GetLeaderRequest\x1a\x16.rpc.GetLeaderResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
+	"\tGetLeader\x12\x15.rpc.GetLeaderRequest\x1a\x16.rpc.GetLeaderResponse\x12@\n" +
+	"\vListServers\x12\x17.rpc.ListServersRequest\x1a\x18.rpc.ListServersResponse\x12F\n" +
+	"\rGetServerById\x12\x19.rpc.GetServerByIdRequest\x1a\x1a.rpc.GetServerByIdResponse\x12C\n" +
+	"\fCreateServer\x12\x18.rpc.CreateServerRequest\x1a\x19.rpc.CreateServerResponse\x12C\n" +
+	"\fUpdateServer\x12\x18.rpc.UpdateServerRequest\x1a\x19.rpc.UpdateServerResponse\x12C\n" +
+	"\fDeleteServer\x12\x18.rpc.DeleteServerRequest\x1a\x19.rpc.DeleteServerResponse\x12:\n" +
+	"\tListTasks\x12\x15.rpc.ListTasksRequest\x1a\x16.rpc.ListTasksResponse\x12@\n" +
+	"\vGetTaskById\x12\x17.rpc.GetTaskByIdRequest\x1a\x18.rpc.GetTaskByIdResponse\x12I\n" +
+	"\x0eGetWorkerStats\x12\x1a.rpc.GetWorkerStatsRequest\x1a\x1b.rpc.GetWorkerStatsResponse\x12@\n" +
+	"\vHealthCheck\x12\x17.rpc.HealthCheckRequest\x1a\x18.rpc.HealthCheckResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
 
 var (
 	file_proto_service_proto_rawDescOnce sync.Once
@@ -1742,7 +3197,7 @@ func file_proto_service_proto_rawDescGZIP() []byte {
 	return file_proto_service_proto_rawDescData
 }
 
-var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
 var file_proto_service_proto_goTypes = []any{
 	(*RegisterWorkerRequest)(nil),     // 0: rpc.RegisterWorkerRequest
 	(*RegisterWorkerResponse)(nil),    // 1: rpc.RegisterWorkerResponse
@@ -1774,44 +3229,90 @@ var file_proto_service_proto_goTypes = []any{
 	(*ReleaseLeadershipResponse)(nil), // 27: rpc.ReleaseLeadershipResponse
 	(*GetLeaderRequest)(nil),          // 28: rpc.GetLeaderRequest
 	(*GetLeaderResponse)(nil),         // 29: rpc.GetLeaderResponse
+	(*ListServersRequest)(nil),        // 30: rpc.ListServersRequest
+	(*ListServersResponse)(nil),       // 31: rpc.ListServersResponse
+	(*GetServerByIdRequest)(nil),      // 32: rpc.GetServerByIdRequest
+	(*GetServerByIdResponse)(nil),     // 33: rpc.GetServerByIdResponse
+	(*CreateServerRequest)(nil),       // 34: rpc.CreateServerRequest
+	(*CreateServerResponse)(nil),      // 35: rpc.CreateServerResponse
+	(*UpdateServerRequest)(nil),       // 36: rpc.UpdateServerRequest
+	(*UpdateServerResponse)(nil),      // 37: rpc.UpdateServerResponse
+	(*DeleteServerRequest)(nil),       // 38: rpc.DeleteServerRequest
+	(*DeleteServerResponse)(nil),      // 39: rpc.DeleteServerResponse
+	(*ListTasksRequest)(nil),          // 40: rpc.ListTasksRequest
+	(*ListTasksResponse)(nil),         // 41: rpc.ListTasksResponse
+	(*GetTaskByIdRequest)(nil),        // 42: rpc.GetTaskByIdRequest
+	(*GetTaskByIdResponse)(nil),       // 43: rpc.GetTaskByIdResponse
+	(*GetWorkerStatsRequest)(nil),     // 44: rpc.GetWorkerStatsRequest
+	(*GetWorkerStatsResponse)(nil),    // 45: rpc.GetWorkerStatsResponse
+	(*HealthCheckRequest)(nil),        // 46: rpc.HealthCheckRequest
+	(*HealthCheckResponse)(nil),       // 47: rpc.HealthCheckResponse
+	(*ServerProto)(nil),               // 48: rpc.ServerProto
+	(*TaskProto)(nil),                 // 49: rpc.TaskProto
+	(*WorkerStatProto)(nil),           // 50: rpc.WorkerStatProto
 }
 var file_proto_service_proto_depIdxs = []int32{
 	6,  // 0: rpc.GetTaskResponse.task:type_name -> rpc.Task
 	19, // 1: rpc.GetServersResponse.servers:type_name -> rpc.Server
 	19, // 2: rpc.GetServerResponse.server:type_name -> rpc.Server
-	0,  // 3: rpc.BackendService.RegisterWorker:input_type -> rpc.RegisterWorkerRequest
-	2,  // 4: rpc.BackendService.Heartbeat:input_type -> rpc.HeartbeatRequest
-	4,  // 5: rpc.BackendService.GetTask:input_type -> rpc.GetTaskRequest
-	7,  // 6: rpc.BackendService.UpdateTaskProgress:input_type -> rpc.UpdateProgressRequest
-	9,  // 7: rpc.BackendService.CompleteTask:input_type -> rpc.CompleteTaskRequest
-	11, // 8: rpc.BackendService.FailTask:input_type -> rpc.FailTaskRequest
-	13, // 9: rpc.BackendService.CreateTask:input_type -> rpc.CreateTaskRequest
-	15, // 10: rpc.BackendService.GetServers:input_type -> rpc.GetServersRequest
-	17, // 11: rpc.BackendService.GetServer:input_type -> rpc.GetServerRequest
-	20, // 12: rpc.BackendService.CheckTaskExists:input_type -> rpc.CheckTaskExistsRequest
-	22, // 13: rpc.BackendService.TryBecomeLeader:input_type -> rpc.TryBecomeLeaderRequest
-	24, // 14: rpc.BackendService.RenewLeadership:input_type -> rpc.RenewLeadershipRequest
-	26, // 15: rpc.BackendService.ReleaseLeadership:input_type -> rpc.ReleaseLeadershipRequest
-	28, // 16: rpc.BackendService.GetLeader:input_type -> rpc.GetLeaderRequest
-	1,  // 17: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
-	3,  // 18: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
-	5,  // 19: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
-	8,  // 20: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
-	10, // 21: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
-	12, // 22: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
-	14, // 23: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
-	16, // 24: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
-	18, // 25: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
-	21, // 26: rpc.BackendService.CheckTaskExists:output_type -> rpc.CheckTaskExistsResponse
-	23, // 27: rpc.BackendService.TryBecomeLeader:output_type -> rpc.TryBecomeLeaderResponse
-	25, // 28: rpc.BackendService.RenewLeadership:output_type -> rpc.RenewLeadershipResponse
-	27, // 29: rpc.BackendService.ReleaseLeadership:output_type -> rpc.ReleaseLeadershipResponse
-	29, // 30: rpc.BackendService.GetLeader:output_type -> rpc.GetLeaderResponse
-	17, // [17:31] is the sub-list for method output_type
-	3,  // [3:17] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	48, // 3: rpc.ListServersResponse.servers:type_name -> rpc.ServerProto
+	48, // 4: rpc.GetServerByIdResponse.server:type_name -> rpc.ServerProto
+	48, // 5: rpc.CreateServerResponse.server:type_name -> rpc.ServerProto
+	48, // 6: rpc.UpdateServerResponse.server:type_name -> rpc.ServerProto
+	49, // 7: rpc.ListTasksResponse.tasks:type_name -> rpc.TaskProto
+	49, // 8: rpc.GetTaskByIdResponse.task:type_name -> rpc.TaskProto
+	50, // 9: rpc.GetWorkerStatsResponse.workers:type_name -> rpc.WorkerStatProto
+	0,  // 10: rpc.BackendService.RegisterWorker:input_type -> rpc.RegisterWorkerRequest
+	2,  // 11: rpc.BackendService.Heartbeat:input_type -> rpc.HeartbeatRequest
+	4,  // 12: rpc.BackendService.GetTask:input_type -> rpc.GetTaskRequest
+	7,  // 13: rpc.BackendService.UpdateTaskProgress:input_type -> rpc.UpdateProgressRequest
+	9,  // 14: rpc.BackendService.CompleteTask:input_type -> rpc.CompleteTaskRequest
+	11, // 15: rpc.BackendService.FailTask:input_type -> rpc.FailTaskRequest
+	13, // 16: rpc.BackendService.CreateTask:input_type -> rpc.CreateTaskRequest
+	15, // 17: rpc.BackendService.GetServers:input_type -> rpc.GetServersRequest
+	17, // 18: rpc.BackendService.GetServer:input_type -> rpc.GetServerRequest
+	20, // 19: rpc.BackendService.CheckTaskExists:input_type -> rpc.CheckTaskExistsRequest
+	22, // 20: rpc.BackendService.TryBecomeLeader:input_type -> rpc.TryBecomeLeaderRequest
+	24, // 21: rpc.BackendService.RenewLeadership:input_type -> rpc.RenewLeadershipRequest
+	26, // 22: rpc.BackendService.ReleaseLeadership:input_type -> rpc.ReleaseLeadershipRequest
+	28, // 23: rpc.BackendService.GetLeader:input_type -> rpc.GetLeaderRequest
+	30, // 24: rpc.BackendService.ListServers:input_type -> rpc.ListServersRequest
+	32, // 25: rpc.BackendService.GetServerById:input_type -> rpc.GetServerByIdRequest
+	34, // 26: rpc.BackendService.CreateServer:input_type -> rpc.CreateServerRequest
+	36, // 27: rpc.BackendService.UpdateServer:input_type -> rpc.UpdateServerRequest
+	38, // 28: rpc.BackendService.DeleteServer:input_type -> rpc.DeleteServerRequest
+	40, // 29: rpc.BackendService.ListTasks:input_type -> rpc.ListTasksRequest
+	42, // 30: rpc.BackendService.GetTaskById:input_type -> rpc.GetTaskByIdRequest
+	44, // 31: rpc.BackendService.GetWorkerStats:input_type -> rpc.GetWorkerStatsRequest
+	46, // 32: rpc.BackendService.HealthCheck:input_type -> rpc.HealthCheckRequest
+	1,  // 33: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
+	3,  // 34: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
+	5,  // 35: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
+	8,  // 36: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
+	10, // 37: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
+	12, // 38: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
+	14, // 39: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
+	16, // 40: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
+	18, // 41: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
+	21, // 42: rpc.BackendService.CheckTaskExists:output_type -> rpc.CheckTaskExistsResponse
+	23, // 43: rpc.BackendService.TryBecomeLeader:output_type -> rpc.TryBecomeLeaderResponse
+	25, // 44: rpc.BackendService.RenewLeadership:output_type -> rpc.RenewLeadershipResponse
+	27, // 45: rpc.BackendService.ReleaseLeadership:output_type -> rpc.ReleaseLeadershipResponse
+	29, // 46: rpc.BackendService.GetLeader:output_type -> rpc.GetLeaderResponse
+	31, // 47: rpc.BackendService.ListServers:output_type -> rpc.ListServersResponse
+	33, // 48: rpc.BackendService.GetServerById:output_type -> rpc.GetServerByIdResponse
+	35, // 49: rpc.BackendService.CreateServer:output_type -> rpc.CreateServerResponse
+	37, // 50: rpc.BackendService.UpdateServer:output_type -> rpc.UpdateServerResponse
+	39, // 51: rpc.BackendService.DeleteServer:output_type -> rpc.DeleteServerResponse
+	41, // 52: rpc.BackendService.ListTasks:output_type -> rpc.ListTasksResponse
+	43, // 53: rpc.BackendService.GetTaskById:output_type -> rpc.GetTaskByIdResponse
+	45, // 54: rpc.BackendService.GetWorkerStats:output_type -> rpc.GetWorkerStatsResponse
+	47, // 55: rpc.BackendService.HealthCheck:output_type -> rpc.HealthCheckResponse
+	33, // [33:56] is the sub-list for method output_type
+	10, // [10:33] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_proto_service_proto_init() }
@@ -1819,13 +3320,18 @@ func file_proto_service_proto_init() {
 	if File_proto_service_proto != nil {
 		return
 	}
+	file_proto_service_proto_msgTypes[34].OneofWrappers = []any{}
+	file_proto_service_proto_msgTypes[36].OneofWrappers = []any{}
+	file_proto_service_proto_msgTypes[40].OneofWrappers = []any{}
+	file_proto_service_proto_msgTypes[48].OneofWrappers = []any{}
+	file_proto_service_proto_msgTypes[49].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_service_proto_rawDesc), len(file_proto_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   30,
+			NumMessages:   51,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

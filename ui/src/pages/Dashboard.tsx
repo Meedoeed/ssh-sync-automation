@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { WorkerStats, Server, SyncTask } from '../types';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<WorkerStats | null>(null);
   const [servers, setServers] = useState<Server[]>([]);
   const [tasks, setTasks] = useState<SyncTask[]>([]);
@@ -39,10 +41,11 @@ const Dashboard = () => {
     );
   }
 
-  const onlineCount = stats?.workers.filter(w => w.state === 'running').length || 0;
+  const onlineCount = stats?.workers?.filter(w => w.state === 'running').length || 0;
   const totalTasks = tasks.length;
   const failedTasks = tasks.filter(t => t.status === 'failed').length;
   const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'processing').length;
+  const activeServers = servers.filter(s => s.is_active).length;
 
   return (
     <div className="max-w-7xl mx-auto space-y-10">
@@ -54,17 +57,37 @@ const Dashboard = () => {
       
       {/* Верхние карточки статистики */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
-          { label: 'Всего серверов', value: servers.length, color: 'text-slate-900' },
-          { label: 'Активных воркеров', value: onlineCount, color: 'text-emerald-600' },
-          { label: 'Всего задач', value: totalTasks, color: 'text-slate-900' },
-          { label: 'Ошибок', value: failedTasks, color: 'text-rose-600' }
-        ].map((item, idx) => (
-          <div key={idx} className="bg-white rounded-[28px] border border-slate-100 p-8 shadow-sm hover:shadow-md transition-all">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-3">{item.label}</div>
-            <div className={`text-4xl font-light ${item.color}`}>{item.value}</div>
+        <div className="bg-white rounded-[28px] border border-slate-100 p-8 shadow-sm hover:shadow-md transition-all">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-3">Всего серверов</div>
+          <div className="text-4xl font-light text-slate-900">{servers.length}</div>
+        </div>
+        
+        {/* Кликабельная карточка воркеров */}
+        <div 
+          onClick={() => navigate('/workers')}
+          className="bg-white rounded-[28px] border border-slate-100 p-8 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+        >
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-3 flex items-center justify-between">
+            Активных воркеров
+            <svg className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
           </div>
-        ))}
+          <div className="text-4xl font-light text-emerald-600">{onlineCount}</div>
+          <div className="text-[10px] text-slate-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            Подробнее →
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-[28px] border border-slate-100 p-8 shadow-sm hover:shadow-md transition-all">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-3">Всего задач</div>
+          <div className="text-4xl font-light text-slate-900">{totalTasks}</div>
+        </div>
+        
+        <div className="bg-white rounded-[28px] border border-slate-100 p-8 shadow-sm hover:shadow-md transition-all">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-3">Ошибок</div>
+          <div className="text-4xl font-light text-rose-600">{failedTasks}</div>
+        </div>
       </div>
 
       {/* Дополнительные показатели */}
@@ -73,9 +96,17 @@ const Dashboard = () => {
           <span className="text-amber-700 font-bold text-sm uppercase tracking-wider">В ожидании</span>
           <span className="text-4xl font-light text-amber-900">{pendingTasks}</span>
         </div>
-        <div className="bg-blue-50/50 border border-blue-100 rounded-[28px] p-8 flex justify-between items-center">
+        <div 
+          onClick={() => navigate('/servers')}
+          className="bg-blue-50/50 border border-blue-100 rounded-[28px] p-8 flex justify-between items-center cursor-pointer group hover:bg-blue-100/50 transition-all"
+        >
           <span className="text-blue-700 font-bold text-sm uppercase tracking-wider">Активных серверов</span>
-          <span className="text-4xl font-light text-blue-900">{servers.filter(s => s.is_active).length}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-4xl font-light text-blue-900">{activeServers}</span>
+            <svg className="w-4 h-4 text-blue-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
         </div>
       </div>
       
@@ -83,7 +114,12 @@ const Dashboard = () => {
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-800">Статус воркеров</h2>
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+          <button 
+            onClick={() => navigate('/workers')}
+            className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
+          >
+            Все воркеры →
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -96,14 +132,17 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {stats?.workers.length === 0 ? (
+              {!stats?.workers || stats.workers.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-8 py-16 text-center text-slate-400 text-sm">
-                    Нет активных воркеров. Добавьте сервер для начала.
+                    Нет активных воркеров. Запустите воркер командой:
+                    <code className="block mt-2 text-xs bg-slate-100 p-2 rounded font-mono">
+                      ./ssh-sync-service worker
+                    </code>
                   </td>
                 </tr>
               ) : (
-                stats?.workers.map(worker => (
+                stats.workers.slice(0, 3).map(worker => (
                   <tr key={worker.server_id} className="hover:bg-slate-50/30 transition-colors">
                     <td className="px-8 py-6">
                       <span className="text-sm font-semibold text-slate-800">{worker.server_name}</span>
@@ -141,12 +180,28 @@ const Dashboard = () => {
             </tbody>
           </table>
         </div>
+        {stats?.workers && stats.workers.length > 3 && (
+          <div className="px-8 py-4 border-t border-slate-50 text-center">
+            <button 
+              onClick={() => navigate('/workers')}
+              className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              и ещё {stats.workers.length - 3} воркер(а/ов) → 
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Таблица Последние задачи */}
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-50">
+        <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-800">Последние задачи</h2>
+          <button 
+            onClick={() => navigate('/tasks')}
+            className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
+          >
+            Все задачи →
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">

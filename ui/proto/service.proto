@@ -1,0 +1,326 @@
+syntax = "proto3";
+
+package rpc;
+
+option go_package = "github.com/Meedoeed/ssh-sync-automation/internal/gen";
+
+service BackendService {
+  rpc RegisterWorker(RegisterWorkerRequest) returns (RegisterWorkerResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+  rpc UpdateTaskProgress(UpdateProgressRequest) returns (UpdateProgressResponse);
+  rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse);
+  rpc FailTask(FailTaskRequest) returns (FailTaskResponse);
+  
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+  
+  rpc GetServers(GetServersRequest) returns (GetServersResponse);
+  rpc GetServer(GetServerRequest) returns (GetServerResponse);
+
+  rpc CheckTaskExists(CheckTaskExistsRequest) returns (CheckTaskExistsResponse);
+
+  rpc TryBecomeLeader(TryBecomeLeaderRequest) returns (TryBecomeLeaderResponse);
+  rpc RenewLeadership(RenewLeadershipRequest) returns (RenewLeadershipResponse);
+  rpc ReleaseLeadership(ReleaseLeadershipRequest) returns (ReleaseLeadershipResponse);
+  rpc GetLeader(GetLeaderRequest) returns (GetLeaderResponse);
+
+  rpc ListServers(ListServersRequest) returns (ListServersResponse);
+  rpc GetServerById(GetServerByIdRequest) returns (GetServerByIdResponse);
+  rpc CreateServer(CreateServerRequest) returns (CreateServerResponse);
+  rpc UpdateServer(UpdateServerRequest) returns (UpdateServerResponse);
+  rpc DeleteServer(DeleteServerRequest) returns (DeleteServerResponse);
+  
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+  rpc GetTaskById(GetTaskByIdRequest) returns (GetTaskByIdResponse);
+  
+  rpc GetWorkerStats(GetWorkerStatsRequest) returns (GetWorkerStatsResponse);
+  
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message RegisterWorkerRequest {
+  string worker_id = 1;
+}
+
+message RegisterWorkerResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message HeartbeatRequest {
+  string worker_id = 1;
+}
+
+message HeartbeatResponse {
+  bool success = 1;
+}
+
+message GetTaskRequest {
+  string worker_id = 1;
+}
+
+message GetTaskResponse {
+  bool has_task = 1;
+  Task task = 2;
+}
+
+message Task {
+  string id = 1;
+  string server_id = 2;
+  string direction = 3;      // "upload" или "download"
+  string file_name = 4;
+  string remote_path = 5;
+  string local_path = 6;
+  int64 file_size = 7;
+}
+
+message UpdateProgressRequest {
+  string task_id = 1;
+  string worker_id = 2;
+  int64 bytes_transferred = 3;
+}
+
+message UpdateProgressResponse {
+  bool success = 1;
+}
+
+message CompleteTaskRequest {
+  string task_id = 1;
+  string worker_id = 2;
+}
+
+message CompleteTaskResponse {
+  bool success = 1;
+}
+
+message FailTaskRequest {
+  string task_id = 1;
+  string worker_id = 2;
+  string error_message = 3;
+}
+
+message FailTaskResponse {
+  bool success = 1;
+}
+
+message CreateTaskRequest {
+  string server_id = 1;
+  string direction = 2;
+  string file_name = 3;
+  string remote_path = 4;
+  string local_path = 5;
+  int64 file_size = 6;
+}
+
+message CreateTaskResponse {
+  bool success = 1;
+  string task_id = 2;
+  string error = 3;
+}
+
+message GetServersRequest {
+  bool active_only = 1;
+}
+
+message GetServersResponse {
+  repeated Server servers = 1;
+}
+
+message GetServerRequest {
+  string server_id = 1;
+}
+
+message GetServerResponse {
+  Server server = 1;
+}
+
+message Server {
+  string id = 1;
+  string name = 2;
+  string host = 3;
+  int32 port = 4;
+  string username = 5;
+  string auth_type = 6;   
+  string password = 7;  
+  string private_key = 8; 
+  bool is_active = 9;
+}
+
+message CheckTaskExistsRequest {
+  string server_id = 1;
+  string direction = 2;
+  string remote_path = 3;
+}
+
+message CheckTaskExistsResponse {
+  bool exists = 1;
+}
+
+message TryBecomeLeaderRequest {
+  string scheduler_id = 1;
+  int32 ttl_seconds = 2;
+}
+
+message TryBecomeLeaderResponse {
+  bool is_leader = 1;
+  string current_leader_id = 2;
+}
+
+message RenewLeadershipRequest {
+  string scheduler_id = 1;
+  int32 ttl_seconds = 2;
+}
+
+message RenewLeadershipResponse {
+  bool success = 1;
+}
+
+message ReleaseLeadershipRequest {
+  string scheduler_id = 1;
+}
+
+message ReleaseLeadershipResponse {
+  bool success = 1;
+}
+
+message GetLeaderRequest {}
+
+message GetLeaderResponse {
+  string leader_id = 1;
+  string last_heartbeat = 2;
+}
+
+message ListServersRequest {
+  bool active_only = 1;
+}
+
+message ListServersResponse {
+  repeated ServerProto servers = 1;
+}
+
+message GetServerByIdRequest {
+  string server_id = 1;
+}
+
+message GetServerByIdResponse {
+  ServerProto server = 1;
+}
+
+message CreateServerRequest {
+  string name = 1;
+  string host = 2;
+  int32 port = 3;
+  string username = 4;
+  string auth_type = 5;
+  optional string password = 6;
+  optional string private_key = 7;
+  bool is_active = 8;
+}
+
+message CreateServerResponse {
+  ServerProto server = 1;
+}
+
+message UpdateServerRequest {
+  string server_id = 1;
+  optional string name = 2;
+  optional string host = 3;
+  optional int32 port = 4;
+  optional string username = 5;
+  optional string auth_type = 6;
+  optional string password = 7;
+  optional string private_key = 8;
+  optional bool is_active = 9;
+}
+
+message UpdateServerResponse {
+  ServerProto server = 1;
+}
+
+message DeleteServerRequest {
+  string server_id = 1;
+}
+
+message DeleteServerResponse {
+  bool success = 1;
+}
+
+message ListTasksRequest {
+  optional string server_id = 1;
+  optional string status = 2;
+  int32 limit = 3;
+}
+
+message ListTasksResponse {
+  repeated TaskProto tasks = 1;
+}
+
+message GetTaskByIdRequest {
+  string task_id = 1;
+}
+
+message GetTaskByIdResponse {
+  TaskProto task = 1;
+}
+
+
+message GetWorkerStatsRequest {}
+
+message GetWorkerStatsResponse {
+  int32 total_workers = 1;
+  repeated WorkerStatProto workers = 2;
+}
+
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+}
+
+
+message ServerProto {
+  string id = 1;
+  string name = 2;
+  string host = 3;
+  int32 port = 4;
+  string username = 5;
+  string auth_type = 6;
+  optional string password = 7;
+  optional string private_key = 8;
+  bool is_active = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  optional string last_seen = 12;
+}
+
+message TaskProto {
+  string id = 1;
+  string server_id = 2;
+  string direction = 3;
+  string file_name = 4;
+  string remote_path = 5;
+  string local_path = 6;
+  int64 file_size = 7;
+  int64 bytes_transferred = 8;
+  double progress = 9;
+  string status = 10;
+  int32 attempt_count = 11;
+  int32 max_attempts = 12;
+  optional string error_message = 13;
+  optional string started_at = 14;
+  optional string completed_at = 15;
+  string created_at = 16;
+  string updated_at = 17;
+}
+
+message WorkerStatProto {
+  string server_id = 1;
+  string server_name = 2;
+  string state = 3;
+  string last_sync = 4;
+  int64 sync_count = 5;
+  int64 error_count = 6;
+  string last_error = 7;
+}

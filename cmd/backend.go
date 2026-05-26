@@ -9,17 +9,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
+	"github.com/spf13/cobra"
+
 	"github.com/Meedoeed/ssh-sync-automation/internal/config"
 	"github.com/Meedoeed/ssh-sync-automation/internal/handler"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/encryption"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
+	myMiddleware "github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/middleware"
 	"github.com/Meedoeed/ssh-sync-automation/internal/rpc"
 	"github.com/Meedoeed/ssh-sync-automation/internal/server"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
 	"github.com/Meedoeed/ssh-sync-automation/proto/genconnect"
-	"github.com/joho/godotenv"
-	"github.com/spf13/cobra"
 )
 
 var backendCmd = &cobra.Command{
@@ -40,14 +42,15 @@ func runBackend(cmd *cobra.Command, args []string) {
 	validateEncryption(cfg)
 
 	logger.Init(cfg.Log.Level, true)
-	logger.Get().Info().Msg("Starting SSH-SYNC-AUTOMATION in BACKEND mode")
+	log := logger.Get()
+	log.Info().Msg("Starting SSH-SYNC-AUTOMATION in BACKEND mode")
 
 	encryptor := encryption.NewEncryptor(cfg.Encryption.Key)
 	ctx := context.Background()
 
 	db, err := postgres.NewDB(ctx, &cfg.Database)
 	if err != nil {
-		logger.Get().Fatal().Err(err).Msg("Failed to connect to database")
+		log.Fatal().Err(err).Msg("Failed to connect to database")
 	}
 	defer db.Close()
 
@@ -68,12 +71,12 @@ func runBackend(cmd *cobra.Command, args []string) {
 	defer cleanupCancel()
 
 	rpcMux := http.NewServeMux()
-	rpcMux.Handle(rpcPath, rpcHandler)
+	rpcMux.Handle(rpcPath, myMiddleware.CORSMiddleware(rpcHandler))
 
 	go func() {
-		logger.Get().Info().Msg("Starting RPC server on :8082")
+		log.Info().Msg("Starting RPC server on :8082")
 		if err := http.ListenAndServe(":8082", rpcMux); err != nil {
-			logger.Get().Fatal().Err(err).Msg("Failed to start RPC server")
+			log.Fatal().Err(err).Msg("Failed to start RPC server")
 		}
 	}()
 
@@ -89,11 +92,11 @@ func runBackend(cmd *cobra.Command, args []string) {
 
 	go func() {
 		if err := httpServer.Start(); err != nil {
-			logger.Get().Fatal().Err(err).Msg("Failed to start HTTP server")
+			log.Fatal().Err(err).Msg("Failed to start HTTP server")
 		}
 	}()
 
-	logger.Get().Info().Msg("Backend API server started. Press Ctrl+C to stop.")
+	log.Info().Msg("Backend API server started. Press Ctrl+C to stop.")
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -103,8 +106,8 @@ func runBackend(cmd *cobra.Command, args []string) {
 	defer cancel()
 
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		logger.Get().Error().Err(err).Msg("HTTP server shutdown error")
+		log.Error().Err(err).Msg("HTTP server shutdown error")
 	}
 
-	logger.Get().Info().Msg("Backend stopped")
+	log.Info().Msg("Backend stopped")
 }

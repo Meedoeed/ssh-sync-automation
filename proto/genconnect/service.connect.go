@@ -73,6 +73,33 @@ const (
 	// BackendServiceGetLeaderProcedure is the fully-qualified name of the BackendService's GetLeader
 	// RPC.
 	BackendServiceGetLeaderProcedure = "/rpc.BackendService/GetLeader"
+	// BackendServiceListServersProcedure is the fully-qualified name of the BackendService's
+	// ListServers RPC.
+	BackendServiceListServersProcedure = "/rpc.BackendService/ListServers"
+	// BackendServiceGetServerByIdProcedure is the fully-qualified name of the BackendService's
+	// GetServerById RPC.
+	BackendServiceGetServerByIdProcedure = "/rpc.BackendService/GetServerById"
+	// BackendServiceCreateServerProcedure is the fully-qualified name of the BackendService's
+	// CreateServer RPC.
+	BackendServiceCreateServerProcedure = "/rpc.BackendService/CreateServer"
+	// BackendServiceUpdateServerProcedure is the fully-qualified name of the BackendService's
+	// UpdateServer RPC.
+	BackendServiceUpdateServerProcedure = "/rpc.BackendService/UpdateServer"
+	// BackendServiceDeleteServerProcedure is the fully-qualified name of the BackendService's
+	// DeleteServer RPC.
+	BackendServiceDeleteServerProcedure = "/rpc.BackendService/DeleteServer"
+	// BackendServiceListTasksProcedure is the fully-qualified name of the BackendService's ListTasks
+	// RPC.
+	BackendServiceListTasksProcedure = "/rpc.BackendService/ListTasks"
+	// BackendServiceGetTaskByIdProcedure is the fully-qualified name of the BackendService's
+	// GetTaskById RPC.
+	BackendServiceGetTaskByIdProcedure = "/rpc.BackendService/GetTaskById"
+	// BackendServiceGetWorkerStatsProcedure is the fully-qualified name of the BackendService's
+	// GetWorkerStats RPC.
+	BackendServiceGetWorkerStatsProcedure = "/rpc.BackendService/GetWorkerStats"
+	// BackendServiceHealthCheckProcedure is the fully-qualified name of the BackendService's
+	// HealthCheck RPC.
+	BackendServiceHealthCheckProcedure = "/rpc.BackendService/HealthCheck"
 )
 
 // BackendServiceClient is a client for the rpc.BackendService service.
@@ -91,6 +118,15 @@ type BackendServiceClient interface {
 	RenewLeadership(context.Context, *connect.Request[gen.RenewLeadershipRequest]) (*connect.Response[gen.RenewLeadershipResponse], error)
 	ReleaseLeadership(context.Context, *connect.Request[gen.ReleaseLeadershipRequest]) (*connect.Response[gen.ReleaseLeadershipResponse], error)
 	GetLeader(context.Context, *connect.Request[gen.GetLeaderRequest]) (*connect.Response[gen.GetLeaderResponse], error)
+	ListServers(context.Context, *connect.Request[gen.ListServersRequest]) (*connect.Response[gen.ListServersResponse], error)
+	GetServerById(context.Context, *connect.Request[gen.GetServerByIdRequest]) (*connect.Response[gen.GetServerByIdResponse], error)
+	CreateServer(context.Context, *connect.Request[gen.CreateServerRequest]) (*connect.Response[gen.CreateServerResponse], error)
+	UpdateServer(context.Context, *connect.Request[gen.UpdateServerRequest]) (*connect.Response[gen.UpdateServerResponse], error)
+	DeleteServer(context.Context, *connect.Request[gen.DeleteServerRequest]) (*connect.Response[gen.DeleteServerResponse], error)
+	ListTasks(context.Context, *connect.Request[gen.ListTasksRequest]) (*connect.Response[gen.ListTasksResponse], error)
+	GetTaskById(context.Context, *connect.Request[gen.GetTaskByIdRequest]) (*connect.Response[gen.GetTaskByIdResponse], error)
+	GetWorkerStats(context.Context, *connect.Request[gen.GetWorkerStatsRequest]) (*connect.Response[gen.GetWorkerStatsResponse], error)
+	HealthCheck(context.Context, *connect.Request[gen.HealthCheckRequest]) (*connect.Response[gen.HealthCheckResponse], error)
 }
 
 // NewBackendServiceClient constructs a client for the rpc.BackendService service. By default, it
@@ -188,6 +224,60 @@ func NewBackendServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(backendServiceMethods.ByName("GetLeader")),
 			connect.WithClientOptions(opts...),
 		),
+		listServers: connect.NewClient[gen.ListServersRequest, gen.ListServersResponse](
+			httpClient,
+			baseURL+BackendServiceListServersProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("ListServers")),
+			connect.WithClientOptions(opts...),
+		),
+		getServerById: connect.NewClient[gen.GetServerByIdRequest, gen.GetServerByIdResponse](
+			httpClient,
+			baseURL+BackendServiceGetServerByIdProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("GetServerById")),
+			connect.WithClientOptions(opts...),
+		),
+		createServer: connect.NewClient[gen.CreateServerRequest, gen.CreateServerResponse](
+			httpClient,
+			baseURL+BackendServiceCreateServerProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("CreateServer")),
+			connect.WithClientOptions(opts...),
+		),
+		updateServer: connect.NewClient[gen.UpdateServerRequest, gen.UpdateServerResponse](
+			httpClient,
+			baseURL+BackendServiceUpdateServerProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("UpdateServer")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteServer: connect.NewClient[gen.DeleteServerRequest, gen.DeleteServerResponse](
+			httpClient,
+			baseURL+BackendServiceDeleteServerProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("DeleteServer")),
+			connect.WithClientOptions(opts...),
+		),
+		listTasks: connect.NewClient[gen.ListTasksRequest, gen.ListTasksResponse](
+			httpClient,
+			baseURL+BackendServiceListTasksProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("ListTasks")),
+			connect.WithClientOptions(opts...),
+		),
+		getTaskById: connect.NewClient[gen.GetTaskByIdRequest, gen.GetTaskByIdResponse](
+			httpClient,
+			baseURL+BackendServiceGetTaskByIdProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("GetTaskById")),
+			connect.WithClientOptions(opts...),
+		),
+		getWorkerStats: connect.NewClient[gen.GetWorkerStatsRequest, gen.GetWorkerStatsResponse](
+			httpClient,
+			baseURL+BackendServiceGetWorkerStatsProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("GetWorkerStats")),
+			connect.WithClientOptions(opts...),
+		),
+		healthCheck: connect.NewClient[gen.HealthCheckRequest, gen.HealthCheckResponse](
+			httpClient,
+			baseURL+BackendServiceHealthCheckProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("HealthCheck")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -207,6 +297,15 @@ type backendServiceClient struct {
 	renewLeadership    *connect.Client[gen.RenewLeadershipRequest, gen.RenewLeadershipResponse]
 	releaseLeadership  *connect.Client[gen.ReleaseLeadershipRequest, gen.ReleaseLeadershipResponse]
 	getLeader          *connect.Client[gen.GetLeaderRequest, gen.GetLeaderResponse]
+	listServers        *connect.Client[gen.ListServersRequest, gen.ListServersResponse]
+	getServerById      *connect.Client[gen.GetServerByIdRequest, gen.GetServerByIdResponse]
+	createServer       *connect.Client[gen.CreateServerRequest, gen.CreateServerResponse]
+	updateServer       *connect.Client[gen.UpdateServerRequest, gen.UpdateServerResponse]
+	deleteServer       *connect.Client[gen.DeleteServerRequest, gen.DeleteServerResponse]
+	listTasks          *connect.Client[gen.ListTasksRequest, gen.ListTasksResponse]
+	getTaskById        *connect.Client[gen.GetTaskByIdRequest, gen.GetTaskByIdResponse]
+	getWorkerStats     *connect.Client[gen.GetWorkerStatsRequest, gen.GetWorkerStatsResponse]
+	healthCheck        *connect.Client[gen.HealthCheckRequest, gen.HealthCheckResponse]
 }
 
 // RegisterWorker calls rpc.BackendService.RegisterWorker.
@@ -279,6 +378,51 @@ func (c *backendServiceClient) GetLeader(ctx context.Context, req *connect.Reque
 	return c.getLeader.CallUnary(ctx, req)
 }
 
+// ListServers calls rpc.BackendService.ListServers.
+func (c *backendServiceClient) ListServers(ctx context.Context, req *connect.Request[gen.ListServersRequest]) (*connect.Response[gen.ListServersResponse], error) {
+	return c.listServers.CallUnary(ctx, req)
+}
+
+// GetServerById calls rpc.BackendService.GetServerById.
+func (c *backendServiceClient) GetServerById(ctx context.Context, req *connect.Request[gen.GetServerByIdRequest]) (*connect.Response[gen.GetServerByIdResponse], error) {
+	return c.getServerById.CallUnary(ctx, req)
+}
+
+// CreateServer calls rpc.BackendService.CreateServer.
+func (c *backendServiceClient) CreateServer(ctx context.Context, req *connect.Request[gen.CreateServerRequest]) (*connect.Response[gen.CreateServerResponse], error) {
+	return c.createServer.CallUnary(ctx, req)
+}
+
+// UpdateServer calls rpc.BackendService.UpdateServer.
+func (c *backendServiceClient) UpdateServer(ctx context.Context, req *connect.Request[gen.UpdateServerRequest]) (*connect.Response[gen.UpdateServerResponse], error) {
+	return c.updateServer.CallUnary(ctx, req)
+}
+
+// DeleteServer calls rpc.BackendService.DeleteServer.
+func (c *backendServiceClient) DeleteServer(ctx context.Context, req *connect.Request[gen.DeleteServerRequest]) (*connect.Response[gen.DeleteServerResponse], error) {
+	return c.deleteServer.CallUnary(ctx, req)
+}
+
+// ListTasks calls rpc.BackendService.ListTasks.
+func (c *backendServiceClient) ListTasks(ctx context.Context, req *connect.Request[gen.ListTasksRequest]) (*connect.Response[gen.ListTasksResponse], error) {
+	return c.listTasks.CallUnary(ctx, req)
+}
+
+// GetTaskById calls rpc.BackendService.GetTaskById.
+func (c *backendServiceClient) GetTaskById(ctx context.Context, req *connect.Request[gen.GetTaskByIdRequest]) (*connect.Response[gen.GetTaskByIdResponse], error) {
+	return c.getTaskById.CallUnary(ctx, req)
+}
+
+// GetWorkerStats calls rpc.BackendService.GetWorkerStats.
+func (c *backendServiceClient) GetWorkerStats(ctx context.Context, req *connect.Request[gen.GetWorkerStatsRequest]) (*connect.Response[gen.GetWorkerStatsResponse], error) {
+	return c.getWorkerStats.CallUnary(ctx, req)
+}
+
+// HealthCheck calls rpc.BackendService.HealthCheck.
+func (c *backendServiceClient) HealthCheck(ctx context.Context, req *connect.Request[gen.HealthCheckRequest]) (*connect.Response[gen.HealthCheckResponse], error) {
+	return c.healthCheck.CallUnary(ctx, req)
+}
+
 // BackendServiceHandler is an implementation of the rpc.BackendService service.
 type BackendServiceHandler interface {
 	RegisterWorker(context.Context, *connect.Request[gen.RegisterWorkerRequest]) (*connect.Response[gen.RegisterWorkerResponse], error)
@@ -295,6 +439,15 @@ type BackendServiceHandler interface {
 	RenewLeadership(context.Context, *connect.Request[gen.RenewLeadershipRequest]) (*connect.Response[gen.RenewLeadershipResponse], error)
 	ReleaseLeadership(context.Context, *connect.Request[gen.ReleaseLeadershipRequest]) (*connect.Response[gen.ReleaseLeadershipResponse], error)
 	GetLeader(context.Context, *connect.Request[gen.GetLeaderRequest]) (*connect.Response[gen.GetLeaderResponse], error)
+	ListServers(context.Context, *connect.Request[gen.ListServersRequest]) (*connect.Response[gen.ListServersResponse], error)
+	GetServerById(context.Context, *connect.Request[gen.GetServerByIdRequest]) (*connect.Response[gen.GetServerByIdResponse], error)
+	CreateServer(context.Context, *connect.Request[gen.CreateServerRequest]) (*connect.Response[gen.CreateServerResponse], error)
+	UpdateServer(context.Context, *connect.Request[gen.UpdateServerRequest]) (*connect.Response[gen.UpdateServerResponse], error)
+	DeleteServer(context.Context, *connect.Request[gen.DeleteServerRequest]) (*connect.Response[gen.DeleteServerResponse], error)
+	ListTasks(context.Context, *connect.Request[gen.ListTasksRequest]) (*connect.Response[gen.ListTasksResponse], error)
+	GetTaskById(context.Context, *connect.Request[gen.GetTaskByIdRequest]) (*connect.Response[gen.GetTaskByIdResponse], error)
+	GetWorkerStats(context.Context, *connect.Request[gen.GetWorkerStatsRequest]) (*connect.Response[gen.GetWorkerStatsResponse], error)
+	HealthCheck(context.Context, *connect.Request[gen.HealthCheckRequest]) (*connect.Response[gen.HealthCheckResponse], error)
 }
 
 // NewBackendServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -388,6 +541,60 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 		connect.WithSchema(backendServiceMethods.ByName("GetLeader")),
 		connect.WithHandlerOptions(opts...),
 	)
+	backendServiceListServersHandler := connect.NewUnaryHandler(
+		BackendServiceListServersProcedure,
+		svc.ListServers,
+		connect.WithSchema(backendServiceMethods.ByName("ListServers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceGetServerByIdHandler := connect.NewUnaryHandler(
+		BackendServiceGetServerByIdProcedure,
+		svc.GetServerById,
+		connect.WithSchema(backendServiceMethods.ByName("GetServerById")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceCreateServerHandler := connect.NewUnaryHandler(
+		BackendServiceCreateServerProcedure,
+		svc.CreateServer,
+		connect.WithSchema(backendServiceMethods.ByName("CreateServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceUpdateServerHandler := connect.NewUnaryHandler(
+		BackendServiceUpdateServerProcedure,
+		svc.UpdateServer,
+		connect.WithSchema(backendServiceMethods.ByName("UpdateServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceDeleteServerHandler := connect.NewUnaryHandler(
+		BackendServiceDeleteServerProcedure,
+		svc.DeleteServer,
+		connect.WithSchema(backendServiceMethods.ByName("DeleteServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceListTasksHandler := connect.NewUnaryHandler(
+		BackendServiceListTasksProcedure,
+		svc.ListTasks,
+		connect.WithSchema(backendServiceMethods.ByName("ListTasks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceGetTaskByIdHandler := connect.NewUnaryHandler(
+		BackendServiceGetTaskByIdProcedure,
+		svc.GetTaskById,
+		connect.WithSchema(backendServiceMethods.ByName("GetTaskById")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceGetWorkerStatsHandler := connect.NewUnaryHandler(
+		BackendServiceGetWorkerStatsProcedure,
+		svc.GetWorkerStats,
+		connect.WithSchema(backendServiceMethods.ByName("GetWorkerStats")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceHealthCheckHandler := connect.NewUnaryHandler(
+		BackendServiceHealthCheckProcedure,
+		svc.HealthCheck,
+		connect.WithSchema(backendServiceMethods.ByName("HealthCheck")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/rpc.BackendService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BackendServiceRegisterWorkerProcedure:
@@ -418,6 +625,24 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 			backendServiceReleaseLeadershipHandler.ServeHTTP(w, r)
 		case BackendServiceGetLeaderProcedure:
 			backendServiceGetLeaderHandler.ServeHTTP(w, r)
+		case BackendServiceListServersProcedure:
+			backendServiceListServersHandler.ServeHTTP(w, r)
+		case BackendServiceGetServerByIdProcedure:
+			backendServiceGetServerByIdHandler.ServeHTTP(w, r)
+		case BackendServiceCreateServerProcedure:
+			backendServiceCreateServerHandler.ServeHTTP(w, r)
+		case BackendServiceUpdateServerProcedure:
+			backendServiceUpdateServerHandler.ServeHTTP(w, r)
+		case BackendServiceDeleteServerProcedure:
+			backendServiceDeleteServerHandler.ServeHTTP(w, r)
+		case BackendServiceListTasksProcedure:
+			backendServiceListTasksHandler.ServeHTTP(w, r)
+		case BackendServiceGetTaskByIdProcedure:
+			backendServiceGetTaskByIdHandler.ServeHTTP(w, r)
+		case BackendServiceGetWorkerStatsProcedure:
+			backendServiceGetWorkerStatsHandler.ServeHTTP(w, r)
+		case BackendServiceHealthCheckProcedure:
+			backendServiceHealthCheckHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -481,4 +706,40 @@ func (UnimplementedBackendServiceHandler) ReleaseLeadership(context.Context, *co
 
 func (UnimplementedBackendServiceHandler) GetLeader(context.Context, *connect.Request[gen.GetLeaderRequest]) (*connect.Response[gen.GetLeaderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.GetLeader is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) ListServers(context.Context, *connect.Request[gen.ListServersRequest]) (*connect.Response[gen.ListServersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.ListServers is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) GetServerById(context.Context, *connect.Request[gen.GetServerByIdRequest]) (*connect.Response[gen.GetServerByIdResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.GetServerById is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) CreateServer(context.Context, *connect.Request[gen.CreateServerRequest]) (*connect.Response[gen.CreateServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.CreateServer is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) UpdateServer(context.Context, *connect.Request[gen.UpdateServerRequest]) (*connect.Response[gen.UpdateServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.UpdateServer is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) DeleteServer(context.Context, *connect.Request[gen.DeleteServerRequest]) (*connect.Response[gen.DeleteServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.DeleteServer is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) ListTasks(context.Context, *connect.Request[gen.ListTasksRequest]) (*connect.Response[gen.ListTasksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.ListTasks is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) GetTaskById(context.Context, *connect.Request[gen.GetTaskByIdRequest]) (*connect.Response[gen.GetTaskByIdResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.GetTaskById is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) GetWorkerStats(context.Context, *connect.Request[gen.GetWorkerStatsRequest]) (*connect.Response[gen.GetWorkerStatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.GetWorkerStats is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) HealthCheck(context.Context, *connect.Request[gen.HealthCheckRequest]) (*connect.Response[gen.HealthCheckResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.HealthCheck is not implemented"))
 }
