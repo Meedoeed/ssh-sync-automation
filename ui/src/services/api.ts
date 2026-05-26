@@ -190,7 +190,7 @@ export const api = {
       },
     };
   },
-  // Tasks
+
   getTasks: async (serverId?: string): Promise<{ data: SyncTask[] }> => {
     const response = await client.listTasks({
       serverId: serverId,

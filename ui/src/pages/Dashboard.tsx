@@ -49,20 +49,17 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-10">
-      {/* Заголовок */}
       <div className="space-y-1">
         <h1 className="text-4xl font-light tracking-tight text-slate-900">Панель управления</h1>
         <p className="text-slate-500 text-sm uppercase tracking-widest font-semibold">Общая статистика системы</p>
       </div>
       
-      {/* Верхние карточки статистики */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-[28px] border border-slate-100 p-8 shadow-sm hover:shadow-md transition-all">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-3">Всего серверов</div>
           <div className="text-4xl font-light text-slate-900">{servers.length}</div>
         </div>
         
-        {/* Кликабельная карточка воркеров */}
         <div 
           onClick={() => navigate('/workers')}
           className="bg-white rounded-[28px] border border-slate-100 p-8 shadow-sm hover:shadow-md transition-all cursor-pointer group"
@@ -90,7 +87,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Дополнительные показатели */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-amber-50/50 border border-amber-100 rounded-[28px] p-8 flex justify-between items-center">
           <span className="text-amber-700 font-bold text-sm uppercase tracking-wider">В ожидании</span>
@@ -110,7 +106,6 @@ const Dashboard = () => {
         </div>
       </div>
       
-      {/* Таблица Статус воркеров */}
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-800">Статус воркеров</h2>
@@ -192,7 +187,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Таблица Последние задачи */}
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-800">Последние задачи</h2>
