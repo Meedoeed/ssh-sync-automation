@@ -710,14 +710,18 @@ func (c *SSHClient) DownloadWithRetry(remotePath, localPath string) error {
 
 func (c *SSHClient) DownloadWithRetryProgress(remotePath, localPath string, progressCallback func(downloaded, total int64)) error {
 	var lastErr error
+	baseDelay := 2 * time.Second
+
 	for attempt := 0; attempt < c.config.RetryMaxAtmpt; attempt++ {
 		if attempt > 0 {
+			delay := baseDelay * time.Duration(attempt*attempt)
 			logger.Get().Warn().
 				Int("attempt", attempt+1).
 				Int("max_attempts", c.config.RetryMaxAtmpt).
 				Str("file", remotePath).
+				Dur("delay", delay).
 				Msg("Retrying download")
-			time.Sleep(c.config.RetryDelay)
+			time.Sleep(delay)
 		}
 
 		err := c.DownloadWithProgress(remotePath, localPath, progressCallback)
@@ -1016,14 +1020,18 @@ func (c *SSHClient) UploadWithProgress(localPath, remotePath string, progressCal
 
 func (c *SSHClient) UploadWithRetryProgress(localPath, remotePath string, progressCallback func(uploaded, total int64)) error {
 	var lastErr error
+	baseDelay := 2 * time.Second
+
 	for attempt := 0; attempt < c.config.RetryMaxAtmpt; attempt++ {
 		if attempt > 0 {
+			delay := baseDelay * time.Duration(attempt*attempt)
 			logger.Get().Warn().
 				Int("attempt", attempt+1).
 				Int("max_attempts", c.config.RetryMaxAtmpt).
 				Str("file", localPath).
+				Dur("delay", delay).
 				Msg("Retrying upload")
-			time.Sleep(c.config.RetryDelay)
+			time.Sleep(delay)
 		}
 
 		err := c.UploadWithProgress(localPath, remotePath, progressCallback)
