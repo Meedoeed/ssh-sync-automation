@@ -2,10 +2,12 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
 	"github.com/Meedoeed/ssh-sync-automation/internal/gen"
@@ -21,6 +23,7 @@ type BackendServer struct {
 	workerRegistry      *WorkerRegistry
 	schedulerLeaderRepo repository.SchedulerLeaderRepository
 	probeTaskRepo       *postgres.ProbeTaskRepo
+	dbPool              *pgxpool.Pool
 }
 
 func NewBackendServer(
@@ -28,6 +31,7 @@ func NewBackendServer(
 	serverRepo repository.ServerRepository,
 	schedulerLeaderRepo repository.SchedulerLeaderRepository,
 	probeTaskRepo *postgres.ProbeTaskRepo,
+	dbPool *pgxpool.Pool,
 ) *BackendServer {
 	return &BackendServer{
 		taskRepo:            taskRepo,
@@ -35,6 +39,7 @@ func NewBackendServer(
 		workerRegistry:      NewWorkerRegistry(),
 		schedulerLeaderRepo: schedulerLeaderRepo,
 		probeTaskRepo:       probeTaskRepo,
+		dbPool:              dbPool,
 	}
 }
 
@@ -702,5 +707,37 @@ func (s *BackendServer) ReportProbeResult(ctx context.Context, req *connect.Requ
 
 	return connect.NewResponse(&gen.ReportProbeResultResponse{
 		Success: true,
+	}), nil
+}
+
+// Liveness возвращает статус "alive" если сервис работает
+func (s *BackendServer) Liveness(ctx context.Context, req *connect.Request[gen.LivenessRequest]) (*connect.Response[gen.LivenessResponse], error) {
+	return connect.NewResponse(&gen.LivenessResponse{
+		Status: "alive",
+	}), nil
+}
+
+func (s *BackendServer) Readiness(ctx context.Context, req *connect.Request[gen.ReadinessRequest]) (*connect.Response[gen.ReadinessResponse], error) {
+	if s.dbPool == nil {
+		return connect.NewResponse(&gen.ReadinessResponse{
+			Status:  "not ready",
+			Message: "database pool is nil",
+		}), nil
+	}
+
+	pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	if err := s.dbPool.Ping(pingCtx); err != nil {
+		logger.Get().Warn().Err(err).Msg("Database ping failed")
+		return connect.NewResponse(&gen.ReadinessResponse{
+			Status:  "not ready",
+			Message: fmt.Sprintf("database unavailable: %v", err),
+		}), nil
+	}
+
+	return connect.NewResponse(&gen.ReadinessResponse{
+		Status:  "ready",
+		Message: "database connected",
 	}), nil
 }

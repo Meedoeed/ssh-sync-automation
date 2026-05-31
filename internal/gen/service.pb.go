@@ -3189,6 +3189,174 @@ func (x *ReportProbeResultResponse) GetSuccess() bool {
 	return false
 }
 
+type LivenessRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LivenessRequest) Reset() {
+	*x = LivenessRequest{}
+	mi := &file_proto_service_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LivenessRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LivenessRequest) ProtoMessage() {}
+
+func (x *LivenessRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LivenessRequest.ProtoReflect.Descriptor instead.
+func (*LivenessRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{56}
+}
+
+type LivenessResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"` // "alive"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LivenessResponse) Reset() {
+	*x = LivenessResponse{}
+	mi := &file_proto_service_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LivenessResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LivenessResponse) ProtoMessage() {}
+
+func (x *LivenessResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LivenessResponse.ProtoReflect.Descriptor instead.
+func (*LivenessResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *LivenessResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type ReadinessRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReadinessRequest) Reset() {
+	*x = ReadinessRequest{}
+	mi := &file_proto_service_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReadinessRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadinessRequest) ProtoMessage() {}
+
+func (x *ReadinessRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadinessRequest.ProtoReflect.Descriptor instead.
+func (*ReadinessRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{58}
+}
+
+type ReadinessResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReadinessResponse) Reset() {
+	*x = ReadinessResponse{}
+	mi := &file_proto_service_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReadinessResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadinessResponse) ProtoMessage() {}
+
+func (x *ReadinessResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadinessResponse.ProtoReflect.Descriptor instead.
+func (*ReadinessResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *ReadinessResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ReadinessResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_proto_service_proto protoreflect.FileDescriptor
 
 const file_proto_service_proto_rawDesc = "" +
@@ -3442,7 +3610,14 @@ const file_proto_service_proto_rawDesc = "" +
 	"filesFound\x12\x14\n" +
 	"\x05error\x18\x04 \x01(\tR\x05error\"5\n" +
 	"\x19ReportProbeResultResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xcb\r\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x11\n" +
+	"\x0fLivenessRequest\"*\n" +
+	"\x10LivenessResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\"\x12\n" +
+	"\x10ReadinessRequest\"E\n" +
+	"\x11ReadinessResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xc0\x0e\n" +
 	"\x0eBackendService\x12I\n" +
 	"\x0eRegisterWorker\x12\x1a.rpc.RegisterWorkerRequest\x1a\x1b.rpc.RegisterWorkerResponse\x12:\n" +
 	"\tHeartbeat\x12\x15.rpc.HeartbeatRequest\x1a\x16.rpc.HeartbeatResponse\x124\n" +
@@ -3470,7 +3645,9 @@ const file_proto_service_proto_rawDesc = "" +
 	"\x0eGetWorkerStats\x12\x1a.rpc.GetWorkerStatsRequest\x1a\x1b.rpc.GetWorkerStatsResponse\x12@\n" +
 	"\vHealthCheck\x12\x17.rpc.HealthCheckRequest\x1a\x18.rpc.HealthCheckResponse\x12C\n" +
 	"\fGetProbeTask\x12\x18.rpc.GetProbeTaskRequest\x1a\x19.rpc.GetProbeTaskResponse\x12R\n" +
-	"\x11ReportProbeResult\x12\x1d.rpc.ReportProbeResultRequest\x1a\x1e.rpc.ReportProbeResultResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
+	"\x11ReportProbeResult\x12\x1d.rpc.ReportProbeResultRequest\x1a\x1e.rpc.ReportProbeResultResponse\x127\n" +
+	"\bLiveness\x12\x14.rpc.LivenessRequest\x1a\x15.rpc.LivenessResponse\x12:\n" +
+	"\tReadiness\x12\x15.rpc.ReadinessRequest\x1a\x16.rpc.ReadinessResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
 
 var (
 	file_proto_service_proto_rawDescOnce sync.Once
@@ -3484,7 +3661,7 @@ func file_proto_service_proto_rawDescGZIP() []byte {
 	return file_proto_service_proto_rawDescData
 }
 
-var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
+var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 60)
 var file_proto_service_proto_goTypes = []any{
 	(*RegisterWorkerRequest)(nil),     // 0: rpc.RegisterWorkerRequest
 	(*RegisterWorkerResponse)(nil),    // 1: rpc.RegisterWorkerResponse
@@ -3542,6 +3719,10 @@ var file_proto_service_proto_goTypes = []any{
 	(*ProbeTask)(nil),                 // 53: rpc.ProbeTask
 	(*ReportProbeResultRequest)(nil),  // 54: rpc.ReportProbeResultRequest
 	(*ReportProbeResultResponse)(nil), // 55: rpc.ReportProbeResultResponse
+	(*LivenessRequest)(nil),           // 56: rpc.LivenessRequest
+	(*LivenessResponse)(nil),          // 57: rpc.LivenessResponse
+	(*ReadinessRequest)(nil),          // 58: rpc.ReadinessRequest
+	(*ReadinessResponse)(nil),         // 59: rpc.ReadinessResponse
 }
 var file_proto_service_proto_depIdxs = []int32{
 	6,  // 0: rpc.GetTaskResponse.task:type_name -> rpc.Task
@@ -3580,33 +3761,37 @@ var file_proto_service_proto_depIdxs = []int32{
 	46, // 33: rpc.BackendService.HealthCheck:input_type -> rpc.HealthCheckRequest
 	51, // 34: rpc.BackendService.GetProbeTask:input_type -> rpc.GetProbeTaskRequest
 	54, // 35: rpc.BackendService.ReportProbeResult:input_type -> rpc.ReportProbeResultRequest
-	1,  // 36: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
-	3,  // 37: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
-	5,  // 38: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
-	8,  // 39: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
-	10, // 40: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
-	12, // 41: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
-	14, // 42: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
-	16, // 43: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
-	18, // 44: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
-	21, // 45: rpc.BackendService.CheckTaskExists:output_type -> rpc.CheckTaskExistsResponse
-	23, // 46: rpc.BackendService.TryBecomeLeader:output_type -> rpc.TryBecomeLeaderResponse
-	25, // 47: rpc.BackendService.RenewLeadership:output_type -> rpc.RenewLeadershipResponse
-	27, // 48: rpc.BackendService.ReleaseLeadership:output_type -> rpc.ReleaseLeadershipResponse
-	29, // 49: rpc.BackendService.GetLeader:output_type -> rpc.GetLeaderResponse
-	31, // 50: rpc.BackendService.ListServers:output_type -> rpc.ListServersResponse
-	33, // 51: rpc.BackendService.GetServerById:output_type -> rpc.GetServerByIdResponse
-	35, // 52: rpc.BackendService.CreateServer:output_type -> rpc.CreateServerResponse
-	37, // 53: rpc.BackendService.UpdateServer:output_type -> rpc.UpdateServerResponse
-	39, // 54: rpc.BackendService.DeleteServer:output_type -> rpc.DeleteServerResponse
-	41, // 55: rpc.BackendService.ListTasks:output_type -> rpc.ListTasksResponse
-	43, // 56: rpc.BackendService.GetTaskById:output_type -> rpc.GetTaskByIdResponse
-	45, // 57: rpc.BackendService.GetWorkerStats:output_type -> rpc.GetWorkerStatsResponse
-	47, // 58: rpc.BackendService.HealthCheck:output_type -> rpc.HealthCheckResponse
-	52, // 59: rpc.BackendService.GetProbeTask:output_type -> rpc.GetProbeTaskResponse
-	55, // 60: rpc.BackendService.ReportProbeResult:output_type -> rpc.ReportProbeResultResponse
-	36, // [36:61] is the sub-list for method output_type
-	11, // [11:36] is the sub-list for method input_type
+	56, // 36: rpc.BackendService.Liveness:input_type -> rpc.LivenessRequest
+	58, // 37: rpc.BackendService.Readiness:input_type -> rpc.ReadinessRequest
+	1,  // 38: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
+	3,  // 39: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
+	5,  // 40: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
+	8,  // 41: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
+	10, // 42: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
+	12, // 43: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
+	14, // 44: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
+	16, // 45: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
+	18, // 46: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
+	21, // 47: rpc.BackendService.CheckTaskExists:output_type -> rpc.CheckTaskExistsResponse
+	23, // 48: rpc.BackendService.TryBecomeLeader:output_type -> rpc.TryBecomeLeaderResponse
+	25, // 49: rpc.BackendService.RenewLeadership:output_type -> rpc.RenewLeadershipResponse
+	27, // 50: rpc.BackendService.ReleaseLeadership:output_type -> rpc.ReleaseLeadershipResponse
+	29, // 51: rpc.BackendService.GetLeader:output_type -> rpc.GetLeaderResponse
+	31, // 52: rpc.BackendService.ListServers:output_type -> rpc.ListServersResponse
+	33, // 53: rpc.BackendService.GetServerById:output_type -> rpc.GetServerByIdResponse
+	35, // 54: rpc.BackendService.CreateServer:output_type -> rpc.CreateServerResponse
+	37, // 55: rpc.BackendService.UpdateServer:output_type -> rpc.UpdateServerResponse
+	39, // 56: rpc.BackendService.DeleteServer:output_type -> rpc.DeleteServerResponse
+	41, // 57: rpc.BackendService.ListTasks:output_type -> rpc.ListTasksResponse
+	43, // 58: rpc.BackendService.GetTaskById:output_type -> rpc.GetTaskByIdResponse
+	45, // 59: rpc.BackendService.GetWorkerStats:output_type -> rpc.GetWorkerStatsResponse
+	47, // 60: rpc.BackendService.HealthCheck:output_type -> rpc.HealthCheckResponse
+	52, // 61: rpc.BackendService.GetProbeTask:output_type -> rpc.GetProbeTaskResponse
+	55, // 62: rpc.BackendService.ReportProbeResult:output_type -> rpc.ReportProbeResultResponse
+	57, // 63: rpc.BackendService.Liveness:output_type -> rpc.LivenessResponse
+	59, // 64: rpc.BackendService.Readiness:output_type -> rpc.ReadinessResponse
+	38, // [38:65] is the sub-list for method output_type
+	11, // [11:38] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
 	11, // [11:11] is the sub-list for extension extendee
 	0,  // [0:11] is the sub-list for field type_name
@@ -3628,7 +3813,7 @@ func file_proto_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_service_proto_rawDesc), len(file_proto_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   56,
+			NumMessages:   60,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

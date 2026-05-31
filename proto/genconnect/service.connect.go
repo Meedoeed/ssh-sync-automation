@@ -106,6 +106,11 @@ const (
 	// BackendServiceReportProbeResultProcedure is the fully-qualified name of the BackendService's
 	// ReportProbeResult RPC.
 	BackendServiceReportProbeResultProcedure = "/rpc.BackendService/ReportProbeResult"
+	// BackendServiceLivenessProcedure is the fully-qualified name of the BackendService's Liveness RPC.
+	BackendServiceLivenessProcedure = "/rpc.BackendService/Liveness"
+	// BackendServiceReadinessProcedure is the fully-qualified name of the BackendService's Readiness
+	// RPC.
+	BackendServiceReadinessProcedure = "/rpc.BackendService/Readiness"
 )
 
 // BackendServiceClient is a client for the rpc.BackendService service.
@@ -135,6 +140,8 @@ type BackendServiceClient interface {
 	HealthCheck(context.Context, *connect.Request[gen.HealthCheckRequest]) (*connect.Response[gen.HealthCheckResponse], error)
 	GetProbeTask(context.Context, *connect.Request[gen.GetProbeTaskRequest]) (*connect.Response[gen.GetProbeTaskResponse], error)
 	ReportProbeResult(context.Context, *connect.Request[gen.ReportProbeResultRequest]) (*connect.Response[gen.ReportProbeResultResponse], error)
+	Liveness(context.Context, *connect.Request[gen.LivenessRequest]) (*connect.Response[gen.LivenessResponse], error)
+	Readiness(context.Context, *connect.Request[gen.ReadinessRequest]) (*connect.Response[gen.ReadinessResponse], error)
 }
 
 // NewBackendServiceClient constructs a client for the rpc.BackendService service. By default, it
@@ -298,6 +305,18 @@ func NewBackendServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(backendServiceMethods.ByName("ReportProbeResult")),
 			connect.WithClientOptions(opts...),
 		),
+		liveness: connect.NewClient[gen.LivenessRequest, gen.LivenessResponse](
+			httpClient,
+			baseURL+BackendServiceLivenessProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("Liveness")),
+			connect.WithClientOptions(opts...),
+		),
+		readiness: connect.NewClient[gen.ReadinessRequest, gen.ReadinessResponse](
+			httpClient,
+			baseURL+BackendServiceReadinessProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("Readiness")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -328,6 +347,8 @@ type backendServiceClient struct {
 	healthCheck        *connect.Client[gen.HealthCheckRequest, gen.HealthCheckResponse]
 	getProbeTask       *connect.Client[gen.GetProbeTaskRequest, gen.GetProbeTaskResponse]
 	reportProbeResult  *connect.Client[gen.ReportProbeResultRequest, gen.ReportProbeResultResponse]
+	liveness           *connect.Client[gen.LivenessRequest, gen.LivenessResponse]
+	readiness          *connect.Client[gen.ReadinessRequest, gen.ReadinessResponse]
 }
 
 // RegisterWorker calls rpc.BackendService.RegisterWorker.
@@ -455,6 +476,16 @@ func (c *backendServiceClient) ReportProbeResult(ctx context.Context, req *conne
 	return c.reportProbeResult.CallUnary(ctx, req)
 }
 
+// Liveness calls rpc.BackendService.Liveness.
+func (c *backendServiceClient) Liveness(ctx context.Context, req *connect.Request[gen.LivenessRequest]) (*connect.Response[gen.LivenessResponse], error) {
+	return c.liveness.CallUnary(ctx, req)
+}
+
+// Readiness calls rpc.BackendService.Readiness.
+func (c *backendServiceClient) Readiness(ctx context.Context, req *connect.Request[gen.ReadinessRequest]) (*connect.Response[gen.ReadinessResponse], error) {
+	return c.readiness.CallUnary(ctx, req)
+}
+
 // BackendServiceHandler is an implementation of the rpc.BackendService service.
 type BackendServiceHandler interface {
 	RegisterWorker(context.Context, *connect.Request[gen.RegisterWorkerRequest]) (*connect.Response[gen.RegisterWorkerResponse], error)
@@ -482,6 +513,8 @@ type BackendServiceHandler interface {
 	HealthCheck(context.Context, *connect.Request[gen.HealthCheckRequest]) (*connect.Response[gen.HealthCheckResponse], error)
 	GetProbeTask(context.Context, *connect.Request[gen.GetProbeTaskRequest]) (*connect.Response[gen.GetProbeTaskResponse], error)
 	ReportProbeResult(context.Context, *connect.Request[gen.ReportProbeResultRequest]) (*connect.Response[gen.ReportProbeResultResponse], error)
+	Liveness(context.Context, *connect.Request[gen.LivenessRequest]) (*connect.Response[gen.LivenessResponse], error)
+	Readiness(context.Context, *connect.Request[gen.ReadinessRequest]) (*connect.Response[gen.ReadinessResponse], error)
 }
 
 // NewBackendServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -641,6 +674,18 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 		connect.WithSchema(backendServiceMethods.ByName("ReportProbeResult")),
 		connect.WithHandlerOptions(opts...),
 	)
+	backendServiceLivenessHandler := connect.NewUnaryHandler(
+		BackendServiceLivenessProcedure,
+		svc.Liveness,
+		connect.WithSchema(backendServiceMethods.ByName("Liveness")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceReadinessHandler := connect.NewUnaryHandler(
+		BackendServiceReadinessProcedure,
+		svc.Readiness,
+		connect.WithSchema(backendServiceMethods.ByName("Readiness")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/rpc.BackendService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BackendServiceRegisterWorkerProcedure:
@@ -693,6 +738,10 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 			backendServiceGetProbeTaskHandler.ServeHTTP(w, r)
 		case BackendServiceReportProbeResultProcedure:
 			backendServiceReportProbeResultHandler.ServeHTTP(w, r)
+		case BackendServiceLivenessProcedure:
+			backendServiceLivenessHandler.ServeHTTP(w, r)
+		case BackendServiceReadinessProcedure:
+			backendServiceReadinessHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -800,4 +849,12 @@ func (UnimplementedBackendServiceHandler) GetProbeTask(context.Context, *connect
 
 func (UnimplementedBackendServiceHandler) ReportProbeResult(context.Context, *connect.Request[gen.ReportProbeResultRequest]) (*connect.Response[gen.ReportProbeResultResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.ReportProbeResult is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) Liveness(context.Context, *connect.Request[gen.LivenessRequest]) (*connect.Response[gen.LivenessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.Liveness is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) Readiness(context.Context, *connect.Request[gen.ReadinessRequest]) (*connect.Response[gen.ReadinessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.Readiness is not implemented"))
 }

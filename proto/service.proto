@@ -40,6 +40,9 @@ service BackendService {
 
   rpc GetProbeTask(GetProbeTaskRequest) returns (GetProbeTaskResponse);
   rpc ReportProbeResult(ReportProbeResultRequest) returns (ReportProbeResultResponse);
+
+  rpc Liveness(LivenessRequest) returns (LivenessResponse);
+  rpc Readiness(ReadinessRequest) returns (ReadinessResponse);
 }
 
 message RegisterWorkerRequest {
@@ -352,4 +355,17 @@ message ReportProbeResultRequest {
 
 message ReportProbeResultResponse {
   bool success = 1;
+}
+
+message LivenessRequest {}
+
+message LivenessResponse {
+  string status = 1;  // "alive"
+}
+
+message ReadinessRequest {}
+
+message ReadinessResponse {
+  string status = 1;  
+  string message = 2;
 }

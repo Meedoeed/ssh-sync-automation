@@ -10,7 +10,7 @@ import (
 
 var SuperLogger *zerolog.Logger
 
-func Init(level string, pretty bool) { // функция-конструктор для глобального логгера SuperLogger
+func Init(level string, pretty bool) {
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 
 	logLevel, err := zerolog.ParseLevel(level)
@@ -21,7 +21,7 @@ func Init(level string, pretty bool) { // функция-конструктор 
 
 	var logger zerolog.Logger
 
-	if pretty { // для отладки человеко-читаемый
+	if pretty {
 		output := zerolog.ConsoleWriter{
 			Out:        os.Stdout,
 			TimeFormat: "15:04:05.000",
@@ -33,12 +33,12 @@ func Init(level string, pretty bool) { // функция-конструктор 
 	}
 
 	SuperLogger = &logger
-	log.Logger = logger // глобальный логгер поменял на настроенный с дефолтного
+	log.Logger = logger
 }
 
-func Get() *zerolog.Logger { // геттер для логгера
+func Get() *zerolog.Logger {
 	if SuperLogger == nil {
-		Init("Info", true) // если не инициализировали логгер ранее - создаём дефолтный отладочный
+		Init("Info", true)
 	}
 	return SuperLogger
 }

@@ -14,12 +14,10 @@ import (
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/config"
 	"github.com/Meedoeed/ssh-sync-automation/internal/gen"
-	"github.com/Meedoeed/ssh-sync-automation/internal/handler"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/encryption"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	"github.com/Meedoeed/ssh-sync-automation/internal/rpc"
 	"github.com/Meedoeed/ssh-sync-automation/internal/runner"
-	"github.com/Meedoeed/ssh-sync-automation/internal/server"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
 	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
 	"github.com/Meedoeed/ssh-sync-automation/proto/genconnect"
@@ -32,7 +30,7 @@ var rootCmd = &cobra.Command{
 
 Режимы запуска:
   ssh-sync-service              - Запуск всех компонентов (монолит через RPC)
-  ssh-sync-service backend      - Запуск только backend API сервера
+  ssh-sync-service backend      - Запуск только backend RPC сервера
   ssh-sync-service scheduler    - Запуск планировщика задач
   ssh-sync-service worker       - Запуск worker для выполнения синхронизации`,
 	Run: runMonolithRPC,
@@ -73,15 +71,11 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 
 	serverRepo := postgres.NewServerRepo(db.Pool, encryptor)
 	taskRepo := postgres.NewTaskRepo(db.Pool)
-	statusRepo := postgres.NewServerStatusRepo(db.Pool)
 	schedulerLeaderRepo := postgres.NewSchedulerLeaderRepo(db.Pool)
 	probeTaskRepo := postgres.NewProbeTaskRepo(db.Pool)
 
-	serverService := service.NewServerService(serverRepo, statusRepo)
 	taskService := service.NewTaskService(taskRepo)
-	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")
-
-	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo, schedulerLeaderRepo, probeTaskRepo)
+	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo, schedulerLeaderRepo, probeTaskRepo, db.Pool)
 	rpcPath, rpcHandler := genconnect.NewBackendServiceHandler(rpcServer)
 
 	cleanupCtx, cleanupCancel := context.WithCancel(ctx)
@@ -100,32 +94,19 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 
 	go rpcServer.StartHeartbeatMonitor(ctx)
 
-	healthHandler := handler.NewHealthHandler(db)
-	serverHandler := handler.NewServerHandler(serverService)
-	taskHandler := handler.NewTaskHandler(taskService)
-
-	httpServer := server.NewHTTP(cfg, db, encryptor, serverService, taskService, syncService)
-	httpServer.SetValidator(handler.NewCustomValidator())
-	handler.RegisterRoutes(httpServer.GetEcho(), healthHandler, serverHandler, taskHandler)
-
-	go func() {
-		log.Info().Msg("Starting HTTP server on :8081")
-		if err := httpServer.Start(); err != nil {
-			log.Fatal().Err(err).Msg("Failed to start HTTP server")
-		}
-	}()
-
 	rpcClient := genconnect.NewBackendServiceClient(
 		&http.Client{Timeout: 30 * time.Second},
 		"http://localhost:8082",
 	)
 
+	// Запуск шедулера
 	schedulerCtx, schedulerCancel := context.WithCancel(ctx)
 	go func() {
 		log.Info().Msg("Starting internal scheduler")
 		runner.RunSchedulerLoop(schedulerCtx, rpcClient, cfg, "./data")
 	}()
 
+	// Запуск воркера
 	workerID := runner.GenerateWorkerID()
 	dataDir := "./data"
 
@@ -157,10 +138,6 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 	workerCancel()
 	probeCancel()
 	time.Sleep(3 * time.Second)
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	httpServer.Shutdown(shutdownCtx)
 
 	log.Info().Msg("Monolith stopped")
 }
