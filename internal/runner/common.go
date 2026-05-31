@@ -292,7 +292,7 @@ func CheckLocalFiles(ctx context.Context, client genconnect.BackendServiceClient
 	return nil
 }
 
-func RunTaskLoop(ctx context.Context, client genconnect.BackendServiceClient, workerID string, cfg *config.Config) {
+func RunTaskLoop(ctx context.Context, client genconnect.BackendServiceClient, workerID string, cfg *config.Config, dataDir string) {
 	baseDelay := 2 * time.Second
 	maxDelay := 60 * time.Second
 	attempt := 0
@@ -341,7 +341,7 @@ func RunTaskLoop(ctx context.Context, client genconnect.BackendServiceClient, wo
 			Str("direction", task.Direction).
 			Msg("Task received, starting execution")
 
-		err = ExecuteTask(ctx, task, workerID, client, cfg)
+		err = ExecuteTask(ctx, task, workerID, client, cfg, dataDir)
 		if err != nil {
 			logger.Get().Error().Err(err).Str("task_id", task.Id).Msg("Task execution failed")
 
@@ -365,7 +365,7 @@ func RunTaskLoop(ctx context.Context, client genconnect.BackendServiceClient, wo
 	}
 }
 
-func ExecuteTask(ctx context.Context, task *gen.Task, workerID string, client genconnect.BackendServiceClient, cfg *config.Config) error {
+func ExecuteTask(ctx context.Context, task *gen.Task, workerID string, client genconnect.BackendServiceClient, cfg *config.Config, dataDir string) error {
 	log := logger.Get()
 
 	if task.Direction == "probe_done" || task.Direction == "probe_tasks" {
@@ -374,7 +374,7 @@ func ExecuteTask(ctx context.Context, task *gen.Task, workerID string, client ge
 			ServerId: task.ServerId,
 			TaskType: task.Direction,
 		}
-		return ExecuteProbeTask(ctx, probeTask, workerID, client, cfg)
+		return ExecuteProbeTask(ctx, probeTask, workerID, client, cfg, dataDir)
 	}
 
 	var serverResp *connect.Response[gen.GetServerResponse]
@@ -436,6 +436,8 @@ func ExecuteTask(ctx context.Context, task *gen.Task, workerID string, client ge
 		remotePath := task.RemotePath
 		localPath := task.LocalPath
 
+		localPath = strings.Replace(localPath, "./data", dataDir, 1)
+
 		if err := EnsureLocalDir(localPath); err != nil {
 			return err
 		}
@@ -466,6 +468,9 @@ func ExecuteTask(ctx context.Context, task *gen.Task, workerID string, client ge
 	} else if task.Direction == "upload" {
 		remotePath := task.RemotePath
 		localPath := task.LocalPath
+
+		// Заменяем ./data на dataDir, если необходимо
+		localPath = strings.Replace(localPath, "./data", dataDir, 1)
 
 		log.Info().Str("task_id", task.Id).Str("local_path", localPath).Str("remote_path", remotePath).Msg("Uploading file")
 
@@ -574,7 +579,7 @@ func RemoveFile(path string) error {
 	return os.Remove(path)
 }
 
-func RunProbeTaskLoop(ctx context.Context, client genconnect.BackendServiceClient, workerID string, cfg *config.Config) {
+func RunProbeTaskLoop(ctx context.Context, client genconnect.BackendServiceClient, workerID string, cfg *config.Config, dataDir string) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -603,7 +608,7 @@ func RunProbeTaskLoop(ctx context.Context, client genconnect.BackendServiceClien
 			Str("task_type", task.TaskType).
 			Msg("Probe task received, starting execution")
 
-		err = ExecuteProbeTask(ctx, task, workerID, client, cfg)
+		err = ExecuteProbeTask(ctx, task, workerID, client, cfg, dataDir)
 		if err != nil {
 			logger.Get().Error().Err(err).Str("task_id", task.Id).Msg("Probe task execution failed")
 			_, _ = client.ReportProbeResult(ctx, connect.NewRequest(&gen.ReportProbeResultRequest{
@@ -615,7 +620,7 @@ func RunProbeTaskLoop(ctx context.Context, client genconnect.BackendServiceClien
 	}
 }
 
-func ExecuteProbeTask(ctx context.Context, task *gen.ProbeTask, workerID string, client genconnect.BackendServiceClient, cfg *config.Config) error {
+func ExecuteProbeTask(ctx context.Context, task *gen.ProbeTask, workerID string, client genconnect.BackendServiceClient, cfg *config.Config, dataDir string) error {
 	log := logger.Get()
 
 	serverResp, err := client.GetServer(ctx, connect.NewRequest(&gen.GetServerRequest{
@@ -660,7 +665,6 @@ func ExecuteProbeTask(ctx context.Context, task *gen.ProbeTask, workerID string,
 
 	var files []string
 
-	// Исправлено: проверяем правильные типы
 	if task.TaskType == "probe_done" {
 		files, err = sshClient.ListFiles("done/")
 		if err != nil {
@@ -668,7 +672,8 @@ func ExecuteProbeTask(ctx context.Context, task *gen.ProbeTask, workerID string,
 		}
 		log.Debug().Str("server", server.Name).Int("files", len(files)).Msg("Found files in ~/done/")
 	} else if task.TaskType == "probe_tasks" {
-		localPath := "./data/tasks/" + server.Name
+		// Используем dataDir вместо хардкода ./data
+		localPath := dataDir + "/tasks/" + server.Name
 		files, err = ReadDirFiles(localPath)
 		if err != nil {
 			log.Debug().Str("server", server.Name).Msg("No local tasks directory")

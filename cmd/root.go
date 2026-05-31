@@ -127,7 +127,10 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 	}()
 
 	workerID := runner.GenerateWorkerID()
+	dataDir := "./data"
+
 	workerCtx, workerCancel := context.WithCancel(ctx)
+	probeCtx, probeCancel := context.WithCancel(ctx)
 
 	_, err = rpcClient.RegisterWorker(ctx, connect.NewRequest(&gen.RegisterWorkerRequest{
 		WorkerId: workerID,
@@ -141,7 +144,8 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 	go func() {
 		log.Info().Str("worker_id", workerID).Msg("Starting internal worker")
 		go runner.RunHeartbeat(workerCtx, rpcClient, workerID)
-		runner.RunTaskLoop(workerCtx, rpcClient, workerID, cfg)
+		go runner.RunTaskLoop(workerCtx, rpcClient, workerID, cfg, dataDir)
+		go runner.RunProbeTaskLoop(probeCtx, rpcClient, workerID, cfg, dataDir)
 	}()
 
 	quit := make(chan os.Signal, 1)
@@ -151,6 +155,7 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 	log.Info().Msg("Shutting down monolith...")
 	schedulerCancel()
 	workerCancel()
+	probeCancel()
 	time.Sleep(3 * time.Second)
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

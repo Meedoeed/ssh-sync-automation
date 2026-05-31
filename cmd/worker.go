@@ -23,6 +23,7 @@ import (
 var (
 	workerID    string
 	backendAddr string
+	dataDir     string
 )
 
 var workerCmd = &cobra.Command{
@@ -35,6 +36,7 @@ var workerCmd = &cobra.Command{
 func init() {
 	workerCmd.Flags().StringVar(&workerID, "id", "", "Уникальный ID воркера (генерируется автоматически если не указан)")
 	workerCmd.Flags().StringVar(&backendAddr, "backend", "http://localhost:8082", "Адрес backend RPC сервера")
+	workerCmd.Flags().StringVar(&dataDir, "data-dir", "./data", "Директория для хранения данных (done, tasks, ssh)")
 }
 
 func runWorker(cmd *cobra.Command, args []string) {
@@ -57,6 +59,7 @@ func runWorker(cmd *cobra.Command, args []string) {
 	log.Info().
 		Str("worker_id", workerID).
 		Str("backend_addr", backendAddr).
+		Str("data_dir", dataDir).
 		Msg("Worker starting")
 
 	httpClient := &http.Client{
@@ -79,8 +82,8 @@ func runWorker(cmd *cobra.Command, args []string) {
 	probeCtx, probeCancel := context.WithCancel(ctx)
 
 	go runner.RunHeartbeat(heartbeatCtx, rpcClient, workerID)
-	go runner.RunTaskLoop(taskCtx, rpcClient, workerID, cfg)
-	go runner.RunProbeTaskLoop(probeCtx, rpcClient, workerID, cfg)
+	go runner.RunTaskLoop(taskCtx, rpcClient, workerID, cfg, dataDir)
+	go runner.RunProbeTaskLoop(probeCtx, rpcClient, workerID, cfg, dataDir)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
