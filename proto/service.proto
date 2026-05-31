@@ -37,6 +37,9 @@ service BackendService {
   rpc GetWorkerStats(GetWorkerStatsRequest) returns (GetWorkerStatsResponse);
   
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
+  rpc GetProbeTask(GetProbeTaskRequest) returns (GetProbeTaskResponse);
+  rpc ReportProbeResult(ReportProbeResultRequest) returns (ReportProbeResultResponse);
 }
 
 message RegisterWorkerRequest {
@@ -323,4 +326,30 @@ message WorkerStatProto {
   int64 sync_count = 5;
   int64 error_count = 6;
   string last_error = 7;
+}
+
+message GetProbeTaskRequest {
+  string worker_id = 1;
+}
+
+message GetProbeTaskResponse {
+  bool has_task = 1;
+  ProbeTask task = 2;
+}
+
+message ProbeTask {
+  string id = 1;
+  string server_id = 2;
+  string task_type = 3; 
+}
+
+message ReportProbeResultRequest {
+  string probe_task_id = 1;
+  string worker_id = 2;
+  repeated string files_found = 3;
+  string error = 4;
+}
+
+message ReportProbeResultResponse {
+  bool success = 1;
 }

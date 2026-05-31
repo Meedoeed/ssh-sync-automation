@@ -100,6 +100,12 @@ const (
 	// BackendServiceHealthCheckProcedure is the fully-qualified name of the BackendService's
 	// HealthCheck RPC.
 	BackendServiceHealthCheckProcedure = "/rpc.BackendService/HealthCheck"
+	// BackendServiceGetProbeTaskProcedure is the fully-qualified name of the BackendService's
+	// GetProbeTask RPC.
+	BackendServiceGetProbeTaskProcedure = "/rpc.BackendService/GetProbeTask"
+	// BackendServiceReportProbeResultProcedure is the fully-qualified name of the BackendService's
+	// ReportProbeResult RPC.
+	BackendServiceReportProbeResultProcedure = "/rpc.BackendService/ReportProbeResult"
 )
 
 // BackendServiceClient is a client for the rpc.BackendService service.
@@ -127,6 +133,8 @@ type BackendServiceClient interface {
 	GetTaskById(context.Context, *connect.Request[gen.GetTaskByIdRequest]) (*connect.Response[gen.GetTaskByIdResponse], error)
 	GetWorkerStats(context.Context, *connect.Request[gen.GetWorkerStatsRequest]) (*connect.Response[gen.GetWorkerStatsResponse], error)
 	HealthCheck(context.Context, *connect.Request[gen.HealthCheckRequest]) (*connect.Response[gen.HealthCheckResponse], error)
+	GetProbeTask(context.Context, *connect.Request[gen.GetProbeTaskRequest]) (*connect.Response[gen.GetProbeTaskResponse], error)
+	ReportProbeResult(context.Context, *connect.Request[gen.ReportProbeResultRequest]) (*connect.Response[gen.ReportProbeResultResponse], error)
 }
 
 // NewBackendServiceClient constructs a client for the rpc.BackendService service. By default, it
@@ -278,6 +286,18 @@ func NewBackendServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(backendServiceMethods.ByName("HealthCheck")),
 			connect.WithClientOptions(opts...),
 		),
+		getProbeTask: connect.NewClient[gen.GetProbeTaskRequest, gen.GetProbeTaskResponse](
+			httpClient,
+			baseURL+BackendServiceGetProbeTaskProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("GetProbeTask")),
+			connect.WithClientOptions(opts...),
+		),
+		reportProbeResult: connect.NewClient[gen.ReportProbeResultRequest, gen.ReportProbeResultResponse](
+			httpClient,
+			baseURL+BackendServiceReportProbeResultProcedure,
+			connect.WithSchema(backendServiceMethods.ByName("ReportProbeResult")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -306,6 +326,8 @@ type backendServiceClient struct {
 	getTaskById        *connect.Client[gen.GetTaskByIdRequest, gen.GetTaskByIdResponse]
 	getWorkerStats     *connect.Client[gen.GetWorkerStatsRequest, gen.GetWorkerStatsResponse]
 	healthCheck        *connect.Client[gen.HealthCheckRequest, gen.HealthCheckResponse]
+	getProbeTask       *connect.Client[gen.GetProbeTaskRequest, gen.GetProbeTaskResponse]
+	reportProbeResult  *connect.Client[gen.ReportProbeResultRequest, gen.ReportProbeResultResponse]
 }
 
 // RegisterWorker calls rpc.BackendService.RegisterWorker.
@@ -423,6 +445,16 @@ func (c *backendServiceClient) HealthCheck(ctx context.Context, req *connect.Req
 	return c.healthCheck.CallUnary(ctx, req)
 }
 
+// GetProbeTask calls rpc.BackendService.GetProbeTask.
+func (c *backendServiceClient) GetProbeTask(ctx context.Context, req *connect.Request[gen.GetProbeTaskRequest]) (*connect.Response[gen.GetProbeTaskResponse], error) {
+	return c.getProbeTask.CallUnary(ctx, req)
+}
+
+// ReportProbeResult calls rpc.BackendService.ReportProbeResult.
+func (c *backendServiceClient) ReportProbeResult(ctx context.Context, req *connect.Request[gen.ReportProbeResultRequest]) (*connect.Response[gen.ReportProbeResultResponse], error) {
+	return c.reportProbeResult.CallUnary(ctx, req)
+}
+
 // BackendServiceHandler is an implementation of the rpc.BackendService service.
 type BackendServiceHandler interface {
 	RegisterWorker(context.Context, *connect.Request[gen.RegisterWorkerRequest]) (*connect.Response[gen.RegisterWorkerResponse], error)
@@ -448,6 +480,8 @@ type BackendServiceHandler interface {
 	GetTaskById(context.Context, *connect.Request[gen.GetTaskByIdRequest]) (*connect.Response[gen.GetTaskByIdResponse], error)
 	GetWorkerStats(context.Context, *connect.Request[gen.GetWorkerStatsRequest]) (*connect.Response[gen.GetWorkerStatsResponse], error)
 	HealthCheck(context.Context, *connect.Request[gen.HealthCheckRequest]) (*connect.Response[gen.HealthCheckResponse], error)
+	GetProbeTask(context.Context, *connect.Request[gen.GetProbeTaskRequest]) (*connect.Response[gen.GetProbeTaskResponse], error)
+	ReportProbeResult(context.Context, *connect.Request[gen.ReportProbeResultRequest]) (*connect.Response[gen.ReportProbeResultResponse], error)
 }
 
 // NewBackendServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -595,6 +629,18 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 		connect.WithSchema(backendServiceMethods.ByName("HealthCheck")),
 		connect.WithHandlerOptions(opts...),
 	)
+	backendServiceGetProbeTaskHandler := connect.NewUnaryHandler(
+		BackendServiceGetProbeTaskProcedure,
+		svc.GetProbeTask,
+		connect.WithSchema(backendServiceMethods.ByName("GetProbeTask")),
+		connect.WithHandlerOptions(opts...),
+	)
+	backendServiceReportProbeResultHandler := connect.NewUnaryHandler(
+		BackendServiceReportProbeResultProcedure,
+		svc.ReportProbeResult,
+		connect.WithSchema(backendServiceMethods.ByName("ReportProbeResult")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/rpc.BackendService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case BackendServiceRegisterWorkerProcedure:
@@ -643,6 +689,10 @@ func NewBackendServiceHandler(svc BackendServiceHandler, opts ...connect.Handler
 			backendServiceGetWorkerStatsHandler.ServeHTTP(w, r)
 		case BackendServiceHealthCheckProcedure:
 			backendServiceHealthCheckHandler.ServeHTTP(w, r)
+		case BackendServiceGetProbeTaskProcedure:
+			backendServiceGetProbeTaskHandler.ServeHTTP(w, r)
+		case BackendServiceReportProbeResultProcedure:
+			backendServiceReportProbeResultHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -742,4 +792,12 @@ func (UnimplementedBackendServiceHandler) GetWorkerStats(context.Context, *conne
 
 func (UnimplementedBackendServiceHandler) HealthCheck(context.Context, *connect.Request[gen.HealthCheckRequest]) (*connect.Response[gen.HealthCheckResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.HealthCheck is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) GetProbeTask(context.Context, *connect.Request[gen.GetProbeTaskRequest]) (*connect.Response[gen.GetProbeTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.GetProbeTask is not implemented"))
+}
+
+func (UnimplementedBackendServiceHandler) ReportProbeResult(context.Context, *connect.Request[gen.ReportProbeResultRequest]) (*connect.Response[gen.ReportProbeResultResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("rpc.BackendService.ReportProbeResult is not implemented"))
 }

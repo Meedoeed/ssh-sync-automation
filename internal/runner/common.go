@@ -368,6 +368,15 @@ func RunTaskLoop(ctx context.Context, client genconnect.BackendServiceClient, wo
 func ExecuteTask(ctx context.Context, task *gen.Task, workerID string, client genconnect.BackendServiceClient, cfg *config.Config) error {
 	log := logger.Get()
 
+	if task.Direction == "probe_done" || task.Direction == "probe_tasks" {
+		probeTask := &gen.ProbeTask{
+			Id:       task.Id,
+			ServerId: task.ServerId,
+			TaskType: task.Direction,
+		}
+		return ExecuteProbeTask(ctx, probeTask, workerID, client, cfg)
+	}
+
 	var serverResp *connect.Response[gen.GetServerResponse]
 	var err error
 
@@ -563,4 +572,128 @@ func EnsureLocalDir(localPath string) error {
 
 func RemoveFile(path string) error {
 	return os.Remove(path)
+}
+
+func RunProbeTaskLoop(ctx context.Context, client genconnect.BackendServiceClient, workerID string, cfg *config.Config) {
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Get().Debug().Str("worker_id", workerID).Msg("Probe task loop stopped")
+			return
+		default:
+		}
+
+		resp, err := client.GetProbeTask(ctx, connect.NewRequest(&gen.GetProbeTaskRequest{
+			WorkerId: workerID,
+		}))
+		if err != nil {
+			logger.Get().Warn().Err(err).Msg("Failed to get probe task")
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		if !resp.Msg.HasTask {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		task := resp.Msg.Task
+		logger.Get().Info().
+			Str("task_id", task.Id).
+			Str("task_type", task.TaskType).
+			Msg("Probe task received, starting execution")
+
+		err = ExecuteProbeTask(ctx, task, workerID, client, cfg)
+		if err != nil {
+			logger.Get().Error().Err(err).Str("task_id", task.Id).Msg("Probe task execution failed")
+			_, _ = client.ReportProbeResult(ctx, connect.NewRequest(&gen.ReportProbeResultRequest{
+				ProbeTaskId: task.Id,
+				WorkerId:    workerID,
+				Error:       err.Error(),
+			}))
+		}
+	}
+}
+
+func ExecuteProbeTask(ctx context.Context, task *gen.ProbeTask, workerID string, client genconnect.BackendServiceClient, cfg *config.Config) error {
+	log := logger.Get()
+
+	serverResp, err := client.GetServer(ctx, connect.NewRequest(&gen.GetServerRequest{
+		ServerId: task.ServerId,
+	}))
+	if err != nil {
+		return fmt.Errorf("failed to get server info: %w", err)
+	}
+
+	server := serverResp.Msg.Server
+	if server == nil {
+		return fmt.Errorf("server not found: %s", task.ServerId)
+	}
+
+	sshClient := infrastructure.NewSSHClient(&cfg.Sync)
+
+	serverID, err := uuid.Parse(server.Id)
+	if err != nil {
+		return fmt.Errorf("invalid server ID: %w", err)
+	}
+
+	domainServer := &domain.Server{
+		ID:       serverID,
+		Name:     server.Name,
+		Host:     server.Host,
+		Port:     int(server.Port),
+		Username: server.Username,
+		AuthType: server.AuthType,
+		IsActive: server.IsActive,
+	}
+
+	if server.AuthType == "password" {
+		domainServer.Password = &server.Password
+	} else if server.AuthType == "key" {
+		domainServer.PrivateKey = &server.PrivateKey
+	}
+
+	if err := ConnectWithRetry(sshClient, domainServer); err != nil {
+		return fmt.Errorf("failed to connect to server %s: %w", server.Name, err)
+	}
+	defer sshClient.Close()
+
+	var files []string
+
+	// Исправлено: проверяем правильные типы
+	if task.TaskType == "probe_done" {
+		files, err = sshClient.ListFiles("done/")
+		if err != nil {
+			return fmt.Errorf("failed to list files in done/: %w", err)
+		}
+		log.Debug().Str("server", server.Name).Int("files", len(files)).Msg("Found files in ~/done/")
+	} else if task.TaskType == "probe_tasks" {
+		localPath := "./data/tasks/" + server.Name
+		files, err = ReadDirFiles(localPath)
+		if err != nil {
+			log.Debug().Str("server", server.Name).Msg("No local tasks directory")
+			files = []string{}
+		} else {
+			log.Debug().Str("server", server.Name).Int("files", len(files)).Msg("Found files in local tasks directory")
+		}
+	} else {
+		return fmt.Errorf("unknown probe task type: %s", task.TaskType)
+	}
+
+	_, err = client.ReportProbeResult(ctx, connect.NewRequest(&gen.ReportProbeResultRequest{
+		ProbeTaskId: task.Id,
+		WorkerId:    workerID,
+		FilesFound:  files,
+	}))
+	if err != nil {
+		return fmt.Errorf("failed to report probe result: %w", err)
+	}
+
+	log.Info().
+		Str("task_id", task.Id).
+		Str("task_type", task.TaskType).
+		Int("files_found", len(files)).
+		Msg("Probe task completed")
+
+	return nil
 }

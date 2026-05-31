@@ -57,13 +57,14 @@ func runBackend(cmd *cobra.Command, args []string) {
 	serverRepo := postgres.NewServerRepo(db.Pool, encryptor)
 	taskRepo := postgres.NewTaskRepo(db.Pool)
 	statusRepo := postgres.NewServerStatusRepo(db.Pool)
+	probeTaskRepo := postgres.NewProbeTaskRepo(db.Pool)
 
 	serverService := service.NewServerService(serverRepo, statusRepo)
 	taskService := service.NewTaskService(taskRepo)
 	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")
 	schedulerLeaderRepo := postgres.NewSchedulerLeaderRepo(db.Pool)
 
-	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo, schedulerLeaderRepo)
+	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo, schedulerLeaderRepo, probeTaskRepo)
 	rpcPath, rpcHandler := genconnect.NewBackendServiceHandler(rpcServer)
 
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())

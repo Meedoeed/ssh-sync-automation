@@ -12,6 +12,7 @@ import (
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	"github.com/Meedoeed/ssh-sync-automation/internal/repository"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
+	"github.com/Meedoeed/ssh-sync-automation/internal/storage/postgres"
 )
 
 type BackendServer struct {
@@ -19,18 +20,21 @@ type BackendServer struct {
 	serverRepo          repository.ServerRepository
 	workerRegistry      *WorkerRegistry
 	schedulerLeaderRepo repository.SchedulerLeaderRepository
+	probeTaskRepo       *postgres.ProbeTaskRepo
 }
 
 func NewBackendServer(
 	taskRepo repository.TaskRepository,
 	serverRepo repository.ServerRepository,
 	schedulerLeaderRepo repository.SchedulerLeaderRepository,
+	probeTaskRepo *postgres.ProbeTaskRepo,
 ) *BackendServer {
 	return &BackendServer{
 		taskRepo:            taskRepo,
 		serverRepo:          serverRepo,
 		workerRegistry:      NewWorkerRegistry(),
 		schedulerLeaderRepo: schedulerLeaderRepo,
+		probeTaskRepo:       probeTaskRepo,
 	}
 }
 
@@ -243,6 +247,34 @@ func (s *BackendServer) CreateTask(ctx context.Context, req *connect.Request[gen
 		}), nil
 	}
 
+	if req.Msg.Direction == "probe_done" || req.Msg.Direction == "probe_tasks" {
+		probeTask := &domain.ProbeTask{
+			ServerID: serverID,
+			TaskType: req.Msg.Direction,
+			Status:   domain.ProbeStatusPending,
+		}
+
+		if err := s.probeTaskRepo.Create(ctx, probeTask); err != nil {
+			logger.Get().Error().Err(err).Msg("Failed to create probe task")
+			return connect.NewResponse(&gen.CreateTaskResponse{
+				Success: false,
+				Error:   err.Error(),
+			}), nil
+		}
+
+		logger.Get().Info().
+			Str("task_id", probeTask.ID.String()).
+			Str("server_id", serverID.String()).
+			Str("task_type", req.Msg.Direction).
+			Msg("Probe task created via RPC")
+
+		return connect.NewResponse(&gen.CreateTaskResponse{
+			Success: true,
+			TaskId:  probeTask.ID.String(),
+		}), nil
+	}
+
+	// Обычная задача синхронизации (upload/download)
 	task := &domain.SyncTask{
 		ID:          uuid.New(),
 		ServerID:    serverID,
@@ -256,7 +288,7 @@ func (s *BackendServer) CreateTask(ctx context.Context, req *connect.Request[gen
 	}
 
 	if err := s.taskRepo.Create(ctx, task); err != nil {
-		logger.Get().Error().Err(err).Msg("Failed to create task")
+		logger.Get().Error().Err(err).Msg("Failed to create sync task")
 		return connect.NewResponse(&gen.CreateTaskResponse{
 			Success: false,
 			Error:   err.Error(),
@@ -266,8 +298,9 @@ func (s *BackendServer) CreateTask(ctx context.Context, req *connect.Request[gen
 	logger.Get().Info().
 		Str("task_id", task.ID.String()).
 		Str("server_id", serverID.String()).
+		Str("direction", string(task.Direction)).
 		Str("file", task.FileName).
-		Msg("Task created via RPC")
+		Msg("Sync task created via RPC")
 
 	return connect.NewResponse(&gen.CreateTaskResponse{
 		Success: true,
@@ -520,4 +553,154 @@ func (s *BackendServer) StartCleanupScheduler(ctx context.Context, taskService *
 			}
 		}
 	}()
+}
+
+func (s *BackendServer) GetProbeTask(ctx context.Context, req *connect.Request[gen.GetProbeTaskRequest]) (*connect.Response[gen.GetProbeTaskResponse], error) {
+	tasks, err := s.probeTaskRepo.ListPending(ctx, 1)
+	if err != nil {
+		logger.Get().Error().Err(err).Msg("Failed to get pending probe tasks")
+		return connect.NewResponse(&gen.GetProbeTaskResponse{
+			HasTask: false,
+		}), nil
+	}
+
+	if len(tasks) == 0 {
+		return connect.NewResponse(&gen.GetProbeTaskResponse{
+			HasTask: false,
+		}), nil
+	}
+
+	task := tasks[0]
+
+	if err := s.probeTaskRepo.ReserveTask(ctx, task.ID, req.Msg.WorkerId); err != nil {
+		logger.Get().Error().Err(err).Str("task_id", task.ID.String()).Msg("Failed to reserve probe task")
+		return connect.NewResponse(&gen.GetProbeTaskResponse{
+			HasTask: false,
+		}), nil
+	}
+
+	logger.Get().Info().
+		Str("task_id", task.ID.String()).
+		Str("worker_id", req.Msg.WorkerId).
+		Str("task_type", task.TaskType).
+		Msg("Probe task assigned to worker")
+
+	return connect.NewResponse(&gen.GetProbeTaskResponse{
+		HasTask: true,
+		Task: &gen.ProbeTask{
+			Id:       task.ID.String(),
+			ServerId: task.ServerID.String(),
+			TaskType: task.TaskType,
+		},
+	}), nil
+}
+
+func (s *BackendServer) ReportProbeResult(ctx context.Context, req *connect.Request[gen.ReportProbeResultRequest]) (*connect.Response[gen.ReportProbeResultResponse], error) {
+	taskID, err := uuid.Parse(req.Msg.ProbeTaskId)
+	if err != nil {
+		return connect.NewResponse(&gen.ReportProbeResultResponse{
+			Success: false,
+		}), nil
+	}
+
+	probeTask, err := s.probeTaskRepo.GetByID(ctx, taskID)
+	if err != nil {
+		logger.Get().Error().Err(err).Str("task_id", req.Msg.ProbeTaskId).Msg("Failed to get probe task")
+		return connect.NewResponse(&gen.ReportProbeResultResponse{
+			Success: false,
+		}), nil
+	}
+
+	server, err := s.serverRepo.GetByID(ctx, probeTask.ServerID)
+	if err != nil {
+		logger.Get().Error().Err(err).Str("server_id", probeTask.ServerID.String()).Msg("Failed to get server")
+		return connect.NewResponse(&gen.ReportProbeResultResponse{
+			Success: false,
+		}), nil
+	}
+	if server == nil {
+		logger.Get().Error().Str("server_id", probeTask.ServerID.String()).Msg("Server not found")
+		return connect.NewResponse(&gen.ReportProbeResultResponse{
+			Success: false,
+		}), nil
+	}
+
+	var errMsg *string
+	if req.Msg.Error != "" {
+		errMsg = &req.Msg.Error
+	}
+
+	if err := s.probeTaskRepo.CompleteTask(ctx, taskID, req.Msg.FilesFound, errMsg); err != nil {
+		logger.Get().Error().Err(err).Str("task_id", req.Msg.ProbeTaskId).Msg("Failed to complete probe task")
+		return connect.NewResponse(&gen.ReportProbeResultResponse{
+			Success: false,
+		}), nil
+	}
+
+	var direction domain.SyncDirection
+	var remotePathPrefix, localPathPrefix string
+
+	if probeTask.TaskType == "probe_done" {
+		direction = domain.DirectionDownload
+		remotePathPrefix = "done/"
+		localPathPrefix = "./data/done/" + server.Name + "/"
+	} else if probeTask.TaskType == "probe_tasks" {
+		direction = domain.DirectionUpload
+		remotePathPrefix = "tasks/"
+		localPathPrefix = "./data/tasks/" + server.Name + "/"
+	} else {
+		logger.Get().Warn().Str("task_type", probeTask.TaskType).Msg("Unknown probe task type")
+		return connect.NewResponse(&gen.ReportProbeResultResponse{
+			Success: true,
+		}), nil
+	}
+
+	for _, fileName := range req.Msg.FilesFound {
+		remotePath := remotePathPrefix + fileName
+		localPath := localPathPrefix + fileName
+
+		exists, err := s.taskRepo.CheckExistingTask(ctx, probeTask.ServerID, direction, remotePath)
+		if err != nil {
+			logger.Get().Warn().Err(err).Str("file", fileName).Msg("Failed to check existing task")
+			continue
+		}
+
+		if exists {
+			logger.Get().Debug().Str("file", fileName).Msg("Task already exists, skipping")
+			continue
+		}
+
+		task := &domain.SyncTask{
+			ID:          uuid.New(),
+			ServerID:    probeTask.ServerID,
+			Direction:   direction,
+			FileName:    fileName,
+			RemotePath:  remotePath,
+			LocalPath:   localPath,
+			Status:      domain.StatusPending,
+			MaxAttempts: 5,
+		}
+
+		if err := s.taskRepo.Create(ctx, task); err != nil {
+			logger.Get().Error().Err(err).Str("file", fileName).Msg("Failed to create sync task")
+			continue
+		}
+
+		logger.Get().Info().
+			Str("probe_task_id", req.Msg.ProbeTaskId).
+			Str("file", fileName).
+			Str("direction", string(direction)).
+			Str("server_name", server.Name).
+			Msg("Sync task created from probe result")
+	}
+
+	logger.Get().Info().
+		Str("task_id", req.Msg.ProbeTaskId).
+		Str("worker_id", req.Msg.WorkerId).
+		Int("files_found", len(req.Msg.FilesFound)).
+		Msg("Probe task completed")
+
+	return connect.NewResponse(&gen.ReportProbeResultResponse{
+		Success: true,
+	}), nil
 }

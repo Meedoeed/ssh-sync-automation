@@ -75,10 +75,12 @@ func runWorker(cmd *cobra.Command, args []string) {
 	log.Info().Bool("success", registerResp.Msg.Success).Str("message", registerResp.Msg.Message).Msg("Worker registered")
 
 	heartbeatCtx, heartbeatCancel := context.WithCancel(ctx)
-	go runner.RunHeartbeat(heartbeatCtx, rpcClient, workerID)
-
 	taskCtx, taskCancel := context.WithCancel(ctx)
+	probeCtx, probeCancel := context.WithCancel(ctx)
+
+	go runner.RunHeartbeat(heartbeatCtx, rpcClient, workerID)
 	go runner.RunTaskLoop(taskCtx, rpcClient, workerID, cfg)
+	go runner.RunProbeTaskLoop(probeCtx, rpcClient, workerID, cfg)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -87,6 +89,7 @@ func runWorker(cmd *cobra.Command, args []string) {
 	log.Info().Msg("Shutting down worker...")
 	heartbeatCancel()
 	taskCancel()
+	probeCancel()
 	time.Sleep(2 * time.Second)
 	log.Info().Msg("Worker stopped")
 }

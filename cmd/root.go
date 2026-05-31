@@ -75,12 +75,13 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 	taskRepo := postgres.NewTaskRepo(db.Pool)
 	statusRepo := postgres.NewServerStatusRepo(db.Pool)
 	schedulerLeaderRepo := postgres.NewSchedulerLeaderRepo(db.Pool)
+	probeTaskRepo := postgres.NewProbeTaskRepo(db.Pool)
 
 	serverService := service.NewServerService(serverRepo, statusRepo)
 	taskService := service.NewTaskService(taskRepo)
 	syncService := service.NewSyncService(serverRepo, taskRepo, statusRepo, "./data")
 
-	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo, schedulerLeaderRepo)
+	rpcServer := rpc.NewBackendServer(taskRepo, serverRepo, schedulerLeaderRepo, probeTaskRepo)
 	rpcPath, rpcHandler := genconnect.NewBackendServiceHandler(rpcServer)
 
 	cleanupCtx, cleanupCancel := context.WithCancel(ctx)

@@ -2921,6 +2921,274 @@ func (x *WorkerStatProto) GetLastError() string {
 	return ""
 }
 
+type GetProbeTaskRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkerId      string                 `protobuf:"bytes,1,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProbeTaskRequest) Reset() {
+	*x = GetProbeTaskRequest{}
+	mi := &file_proto_service_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProbeTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProbeTaskRequest) ProtoMessage() {}
+
+func (x *GetProbeTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProbeTaskRequest.ProtoReflect.Descriptor instead.
+func (*GetProbeTaskRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *GetProbeTaskRequest) GetWorkerId() string {
+	if x != nil {
+		return x.WorkerId
+	}
+	return ""
+}
+
+type GetProbeTaskResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HasTask       bool                   `protobuf:"varint,1,opt,name=has_task,json=hasTask,proto3" json:"has_task,omitempty"`
+	Task          *ProbeTask             `protobuf:"bytes,2,opt,name=task,proto3" json:"task,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProbeTaskResponse) Reset() {
+	*x = GetProbeTaskResponse{}
+	mi := &file_proto_service_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProbeTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProbeTaskResponse) ProtoMessage() {}
+
+func (x *GetProbeTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProbeTaskResponse.ProtoReflect.Descriptor instead.
+func (*GetProbeTaskResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *GetProbeTaskResponse) GetHasTask() bool {
+	if x != nil {
+		return x.HasTask
+	}
+	return false
+}
+
+func (x *GetProbeTaskResponse) GetTask() *ProbeTask {
+	if x != nil {
+		return x.Task
+	}
+	return nil
+}
+
+type ProbeTask struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ServerId      string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	TaskType      string                 `protobuf:"bytes,3,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProbeTask) Reset() {
+	*x = ProbeTask{}
+	mi := &file_proto_service_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProbeTask) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProbeTask) ProtoMessage() {}
+
+func (x *ProbeTask) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProbeTask.ProtoReflect.Descriptor instead.
+func (*ProbeTask) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *ProbeTask) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ProbeTask) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *ProbeTask) GetTaskType() string {
+	if x != nil {
+		return x.TaskType
+	}
+	return ""
+}
+
+type ReportProbeResultRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProbeTaskId   string                 `protobuf:"bytes,1,opt,name=probe_task_id,json=probeTaskId,proto3" json:"probe_task_id,omitempty"`
+	WorkerId      string                 `protobuf:"bytes,2,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
+	FilesFound    []string               `protobuf:"bytes,3,rep,name=files_found,json=filesFound,proto3" json:"files_found,omitempty"`
+	Error         string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportProbeResultRequest) Reset() {
+	*x = ReportProbeResultRequest{}
+	mi := &file_proto_service_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportProbeResultRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportProbeResultRequest) ProtoMessage() {}
+
+func (x *ReportProbeResultRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportProbeResultRequest.ProtoReflect.Descriptor instead.
+func (*ReportProbeResultRequest) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *ReportProbeResultRequest) GetProbeTaskId() string {
+	if x != nil {
+		return x.ProbeTaskId
+	}
+	return ""
+}
+
+func (x *ReportProbeResultRequest) GetWorkerId() string {
+	if x != nil {
+		return x.WorkerId
+	}
+	return ""
+}
+
+func (x *ReportProbeResultRequest) GetFilesFound() []string {
+	if x != nil {
+		return x.FilesFound
+	}
+	return nil
+}
+
+func (x *ReportProbeResultRequest) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type ReportProbeResultResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportProbeResultResponse) Reset() {
+	*x = ReportProbeResultResponse{}
+	mi := &file_proto_service_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportProbeResultResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportProbeResultResponse) ProtoMessage() {}
+
+func (x *ReportProbeResultResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportProbeResultResponse.ProtoReflect.Descriptor instead.
+func (*ReportProbeResultResponse) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *ReportProbeResultResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 var File_proto_service_proto protoreflect.FileDescriptor
 
 const file_proto_service_proto_rawDesc = "" +
@@ -3157,7 +3425,24 @@ const file_proto_service_proto_rawDesc = "" +
 	"\verror_count\x18\x06 \x01(\x03R\n" +
 	"errorCount\x12\x1d\n" +
 	"\n" +
-	"last_error\x18\a \x01(\tR\tlastError2\xb2\f\n" +
+	"last_error\x18\a \x01(\tR\tlastError\"2\n" +
+	"\x13GetProbeTaskRequest\x12\x1b\n" +
+	"\tworker_id\x18\x01 \x01(\tR\bworkerId\"U\n" +
+	"\x14GetProbeTaskResponse\x12\x19\n" +
+	"\bhas_task\x18\x01 \x01(\bR\ahasTask\x12\"\n" +
+	"\x04task\x18\x02 \x01(\v2\x0e.rpc.ProbeTaskR\x04task\"U\n" +
+	"\tProbeTask\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x1b\n" +
+	"\ttask_type\x18\x03 \x01(\tR\btaskType\"\x92\x01\n" +
+	"\x18ReportProbeResultRequest\x12\"\n" +
+	"\rprobe_task_id\x18\x01 \x01(\tR\vprobeTaskId\x12\x1b\n" +
+	"\tworker_id\x18\x02 \x01(\tR\bworkerId\x12\x1f\n" +
+	"\vfiles_found\x18\x03 \x03(\tR\n" +
+	"filesFound\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"5\n" +
+	"\x19ReportProbeResultResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xcb\r\n" +
 	"\x0eBackendService\x12I\n" +
 	"\x0eRegisterWorker\x12\x1a.rpc.RegisterWorkerRequest\x1a\x1b.rpc.RegisterWorkerResponse\x12:\n" +
 	"\tHeartbeat\x12\x15.rpc.HeartbeatRequest\x1a\x16.rpc.HeartbeatResponse\x124\n" +
@@ -3183,7 +3468,9 @@ const file_proto_service_proto_rawDesc = "" +
 	"\tListTasks\x12\x15.rpc.ListTasksRequest\x1a\x16.rpc.ListTasksResponse\x12@\n" +
 	"\vGetTaskById\x12\x17.rpc.GetTaskByIdRequest\x1a\x18.rpc.GetTaskByIdResponse\x12I\n" +
 	"\x0eGetWorkerStats\x12\x1a.rpc.GetWorkerStatsRequest\x1a\x1b.rpc.GetWorkerStatsResponse\x12@\n" +
-	"\vHealthCheck\x12\x17.rpc.HealthCheckRequest\x1a\x18.rpc.HealthCheckResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
+	"\vHealthCheck\x12\x17.rpc.HealthCheckRequest\x1a\x18.rpc.HealthCheckResponse\x12C\n" +
+	"\fGetProbeTask\x12\x18.rpc.GetProbeTaskRequest\x1a\x19.rpc.GetProbeTaskResponse\x12R\n" +
+	"\x11ReportProbeResult\x12\x1d.rpc.ReportProbeResultRequest\x1a\x1e.rpc.ReportProbeResultResponseB6Z4github.com/Meedoeed/ssh-sync-automation/internal/genb\x06proto3"
 
 var (
 	file_proto_service_proto_rawDescOnce sync.Once
@@ -3197,7 +3484,7 @@ func file_proto_service_proto_rawDescGZIP() []byte {
 	return file_proto_service_proto_rawDescData
 }
 
-var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
+var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
 var file_proto_service_proto_goTypes = []any{
 	(*RegisterWorkerRequest)(nil),     // 0: rpc.RegisterWorkerRequest
 	(*RegisterWorkerResponse)(nil),    // 1: rpc.RegisterWorkerResponse
@@ -3250,6 +3537,11 @@ var file_proto_service_proto_goTypes = []any{
 	(*ServerProto)(nil),               // 48: rpc.ServerProto
 	(*TaskProto)(nil),                 // 49: rpc.TaskProto
 	(*WorkerStatProto)(nil),           // 50: rpc.WorkerStatProto
+	(*GetProbeTaskRequest)(nil),       // 51: rpc.GetProbeTaskRequest
+	(*GetProbeTaskResponse)(nil),      // 52: rpc.GetProbeTaskResponse
+	(*ProbeTask)(nil),                 // 53: rpc.ProbeTask
+	(*ReportProbeResultRequest)(nil),  // 54: rpc.ReportProbeResultRequest
+	(*ReportProbeResultResponse)(nil), // 55: rpc.ReportProbeResultResponse
 }
 var file_proto_service_proto_depIdxs = []int32{
 	6,  // 0: rpc.GetTaskResponse.task:type_name -> rpc.Task
@@ -3262,57 +3554,62 @@ var file_proto_service_proto_depIdxs = []int32{
 	49, // 7: rpc.ListTasksResponse.tasks:type_name -> rpc.TaskProto
 	49, // 8: rpc.GetTaskByIdResponse.task:type_name -> rpc.TaskProto
 	50, // 9: rpc.GetWorkerStatsResponse.workers:type_name -> rpc.WorkerStatProto
-	0,  // 10: rpc.BackendService.RegisterWorker:input_type -> rpc.RegisterWorkerRequest
-	2,  // 11: rpc.BackendService.Heartbeat:input_type -> rpc.HeartbeatRequest
-	4,  // 12: rpc.BackendService.GetTask:input_type -> rpc.GetTaskRequest
-	7,  // 13: rpc.BackendService.UpdateTaskProgress:input_type -> rpc.UpdateProgressRequest
-	9,  // 14: rpc.BackendService.CompleteTask:input_type -> rpc.CompleteTaskRequest
-	11, // 15: rpc.BackendService.FailTask:input_type -> rpc.FailTaskRequest
-	13, // 16: rpc.BackendService.CreateTask:input_type -> rpc.CreateTaskRequest
-	15, // 17: rpc.BackendService.GetServers:input_type -> rpc.GetServersRequest
-	17, // 18: rpc.BackendService.GetServer:input_type -> rpc.GetServerRequest
-	20, // 19: rpc.BackendService.CheckTaskExists:input_type -> rpc.CheckTaskExistsRequest
-	22, // 20: rpc.BackendService.TryBecomeLeader:input_type -> rpc.TryBecomeLeaderRequest
-	24, // 21: rpc.BackendService.RenewLeadership:input_type -> rpc.RenewLeadershipRequest
-	26, // 22: rpc.BackendService.ReleaseLeadership:input_type -> rpc.ReleaseLeadershipRequest
-	28, // 23: rpc.BackendService.GetLeader:input_type -> rpc.GetLeaderRequest
-	30, // 24: rpc.BackendService.ListServers:input_type -> rpc.ListServersRequest
-	32, // 25: rpc.BackendService.GetServerById:input_type -> rpc.GetServerByIdRequest
-	34, // 26: rpc.BackendService.CreateServer:input_type -> rpc.CreateServerRequest
-	36, // 27: rpc.BackendService.UpdateServer:input_type -> rpc.UpdateServerRequest
-	38, // 28: rpc.BackendService.DeleteServer:input_type -> rpc.DeleteServerRequest
-	40, // 29: rpc.BackendService.ListTasks:input_type -> rpc.ListTasksRequest
-	42, // 30: rpc.BackendService.GetTaskById:input_type -> rpc.GetTaskByIdRequest
-	44, // 31: rpc.BackendService.GetWorkerStats:input_type -> rpc.GetWorkerStatsRequest
-	46, // 32: rpc.BackendService.HealthCheck:input_type -> rpc.HealthCheckRequest
-	1,  // 33: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
-	3,  // 34: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
-	5,  // 35: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
-	8,  // 36: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
-	10, // 37: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
-	12, // 38: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
-	14, // 39: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
-	16, // 40: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
-	18, // 41: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
-	21, // 42: rpc.BackendService.CheckTaskExists:output_type -> rpc.CheckTaskExistsResponse
-	23, // 43: rpc.BackendService.TryBecomeLeader:output_type -> rpc.TryBecomeLeaderResponse
-	25, // 44: rpc.BackendService.RenewLeadership:output_type -> rpc.RenewLeadershipResponse
-	27, // 45: rpc.BackendService.ReleaseLeadership:output_type -> rpc.ReleaseLeadershipResponse
-	29, // 46: rpc.BackendService.GetLeader:output_type -> rpc.GetLeaderResponse
-	31, // 47: rpc.BackendService.ListServers:output_type -> rpc.ListServersResponse
-	33, // 48: rpc.BackendService.GetServerById:output_type -> rpc.GetServerByIdResponse
-	35, // 49: rpc.BackendService.CreateServer:output_type -> rpc.CreateServerResponse
-	37, // 50: rpc.BackendService.UpdateServer:output_type -> rpc.UpdateServerResponse
-	39, // 51: rpc.BackendService.DeleteServer:output_type -> rpc.DeleteServerResponse
-	41, // 52: rpc.BackendService.ListTasks:output_type -> rpc.ListTasksResponse
-	43, // 53: rpc.BackendService.GetTaskById:output_type -> rpc.GetTaskByIdResponse
-	45, // 54: rpc.BackendService.GetWorkerStats:output_type -> rpc.GetWorkerStatsResponse
-	47, // 55: rpc.BackendService.HealthCheck:output_type -> rpc.HealthCheckResponse
-	33, // [33:56] is the sub-list for method output_type
-	10, // [10:33] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	53, // 10: rpc.GetProbeTaskResponse.task:type_name -> rpc.ProbeTask
+	0,  // 11: rpc.BackendService.RegisterWorker:input_type -> rpc.RegisterWorkerRequest
+	2,  // 12: rpc.BackendService.Heartbeat:input_type -> rpc.HeartbeatRequest
+	4,  // 13: rpc.BackendService.GetTask:input_type -> rpc.GetTaskRequest
+	7,  // 14: rpc.BackendService.UpdateTaskProgress:input_type -> rpc.UpdateProgressRequest
+	9,  // 15: rpc.BackendService.CompleteTask:input_type -> rpc.CompleteTaskRequest
+	11, // 16: rpc.BackendService.FailTask:input_type -> rpc.FailTaskRequest
+	13, // 17: rpc.BackendService.CreateTask:input_type -> rpc.CreateTaskRequest
+	15, // 18: rpc.BackendService.GetServers:input_type -> rpc.GetServersRequest
+	17, // 19: rpc.BackendService.GetServer:input_type -> rpc.GetServerRequest
+	20, // 20: rpc.BackendService.CheckTaskExists:input_type -> rpc.CheckTaskExistsRequest
+	22, // 21: rpc.BackendService.TryBecomeLeader:input_type -> rpc.TryBecomeLeaderRequest
+	24, // 22: rpc.BackendService.RenewLeadership:input_type -> rpc.RenewLeadershipRequest
+	26, // 23: rpc.BackendService.ReleaseLeadership:input_type -> rpc.ReleaseLeadershipRequest
+	28, // 24: rpc.BackendService.GetLeader:input_type -> rpc.GetLeaderRequest
+	30, // 25: rpc.BackendService.ListServers:input_type -> rpc.ListServersRequest
+	32, // 26: rpc.BackendService.GetServerById:input_type -> rpc.GetServerByIdRequest
+	34, // 27: rpc.BackendService.CreateServer:input_type -> rpc.CreateServerRequest
+	36, // 28: rpc.BackendService.UpdateServer:input_type -> rpc.UpdateServerRequest
+	38, // 29: rpc.BackendService.DeleteServer:input_type -> rpc.DeleteServerRequest
+	40, // 30: rpc.BackendService.ListTasks:input_type -> rpc.ListTasksRequest
+	42, // 31: rpc.BackendService.GetTaskById:input_type -> rpc.GetTaskByIdRequest
+	44, // 32: rpc.BackendService.GetWorkerStats:input_type -> rpc.GetWorkerStatsRequest
+	46, // 33: rpc.BackendService.HealthCheck:input_type -> rpc.HealthCheckRequest
+	51, // 34: rpc.BackendService.GetProbeTask:input_type -> rpc.GetProbeTaskRequest
+	54, // 35: rpc.BackendService.ReportProbeResult:input_type -> rpc.ReportProbeResultRequest
+	1,  // 36: rpc.BackendService.RegisterWorker:output_type -> rpc.RegisterWorkerResponse
+	3,  // 37: rpc.BackendService.Heartbeat:output_type -> rpc.HeartbeatResponse
+	5,  // 38: rpc.BackendService.GetTask:output_type -> rpc.GetTaskResponse
+	8,  // 39: rpc.BackendService.UpdateTaskProgress:output_type -> rpc.UpdateProgressResponse
+	10, // 40: rpc.BackendService.CompleteTask:output_type -> rpc.CompleteTaskResponse
+	12, // 41: rpc.BackendService.FailTask:output_type -> rpc.FailTaskResponse
+	14, // 42: rpc.BackendService.CreateTask:output_type -> rpc.CreateTaskResponse
+	16, // 43: rpc.BackendService.GetServers:output_type -> rpc.GetServersResponse
+	18, // 44: rpc.BackendService.GetServer:output_type -> rpc.GetServerResponse
+	21, // 45: rpc.BackendService.CheckTaskExists:output_type -> rpc.CheckTaskExistsResponse
+	23, // 46: rpc.BackendService.TryBecomeLeader:output_type -> rpc.TryBecomeLeaderResponse
+	25, // 47: rpc.BackendService.RenewLeadership:output_type -> rpc.RenewLeadershipResponse
+	27, // 48: rpc.BackendService.ReleaseLeadership:output_type -> rpc.ReleaseLeadershipResponse
+	29, // 49: rpc.BackendService.GetLeader:output_type -> rpc.GetLeaderResponse
+	31, // 50: rpc.BackendService.ListServers:output_type -> rpc.ListServersResponse
+	33, // 51: rpc.BackendService.GetServerById:output_type -> rpc.GetServerByIdResponse
+	35, // 52: rpc.BackendService.CreateServer:output_type -> rpc.CreateServerResponse
+	37, // 53: rpc.BackendService.UpdateServer:output_type -> rpc.UpdateServerResponse
+	39, // 54: rpc.BackendService.DeleteServer:output_type -> rpc.DeleteServerResponse
+	41, // 55: rpc.BackendService.ListTasks:output_type -> rpc.ListTasksResponse
+	43, // 56: rpc.BackendService.GetTaskById:output_type -> rpc.GetTaskByIdResponse
+	45, // 57: rpc.BackendService.GetWorkerStats:output_type -> rpc.GetWorkerStatsResponse
+	47, // 58: rpc.BackendService.HealthCheck:output_type -> rpc.HealthCheckResponse
+	52, // 59: rpc.BackendService.GetProbeTask:output_type -> rpc.GetProbeTaskResponse
+	55, // 60: rpc.BackendService.ReportProbeResult:output_type -> rpc.ReportProbeResultResponse
+	36, // [36:61] is the sub-list for method output_type
+	11, // [11:36] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_proto_service_proto_init() }
@@ -3331,7 +3628,7 @@ func file_proto_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_service_proto_rawDesc), len(file_proto_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   51,
+			NumMessages:   56,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
