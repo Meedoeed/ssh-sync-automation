@@ -5,19 +5,24 @@ import (
 	"time"
 )
 
+type WorkerInfo struct {
+	LastHeartbeat time.Time
+	CurrentTasks  int
+}
+
 type WorkerRegistry struct {
-	workers map[string]time.Time
+	workers map[string]*WorkerInfo
 	mu      sync.RWMutex
 }
 
 type WorkerStat struct {
-	ServerID   string
-	ServerName string
-	State      string
-	LastSync   time.Time
-	SyncCount  int64
-	ErrorCount int64
-	LastError  string
+	WorkerID     string
+	State        string
+	LastSync     time.Time
+	SyncCount    int64
+	ErrorCount   int64
+	LastError    string
+	CurrentTasks int
 }
 
 type WorkerStats struct {
@@ -27,20 +32,69 @@ type WorkerStats struct {
 
 func NewWorkerRegistry() *WorkerRegistry {
 	return &WorkerRegistry{
-		workers: make(map[string]time.Time),
+		workers: make(map[string]*WorkerInfo),
 	}
 }
 
 func (r *WorkerRegistry) Register(workerID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.workers[workerID] = time.Now()
+	r.workers[workerID] = &WorkerInfo{
+		LastHeartbeat: time.Now(),
+		CurrentTasks:  0,
+	}
 }
 
 func (r *WorkerRegistry) Heartbeat(workerID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.workers[workerID] = time.Now()
+	if info, exists := r.workers[workerID]; exists {
+		info.LastHeartbeat = time.Now()
+	}
+}
+
+func (r *WorkerRegistry) IncrementTaskCount(workerID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if info, exists := r.workers[workerID]; exists {
+		info.CurrentTasks++
+	}
+}
+
+func (r *WorkerRegistry) DecrementTaskCount(workerID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if info, exists := r.workers[workerID]; exists {
+		if info.CurrentTasks > 0 {
+			info.CurrentTasks--
+		}
+	}
+}
+
+func (r *WorkerRegistry) GetWorkerLoad(workerID string) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if info, exists := r.workers[workerID]; exists {
+		return info.CurrentTasks
+	}
+	return 999
+}
+
+func (r *WorkerRegistry) GetLeastLoadedWorker() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var leastLoaded string
+	minTasks := int(^uint(0) >> 1)
+
+	for workerID, info := range r.workers {
+		if info.CurrentTasks < minTasks {
+			minTasks = info.CurrentTasks
+			leastLoaded = workerID
+		}
+	}
+
+	return leastLoaded
 }
 
 func (r *WorkerRegistry) GetDeadWorkers(timeout time.Duration) []string {
@@ -49,8 +103,8 @@ func (r *WorkerRegistry) GetDeadWorkers(timeout time.Duration) []string {
 
 	var dead []string
 	now := time.Now()
-	for workerID, lastHeartbeat := range r.workers {
-		if now.Sub(lastHeartbeat) > timeout {
+	for workerID, info := range r.workers {
+		if now.Sub(info.LastHeartbeat) > timeout {
 			dead = append(dead, workerID)
 		}
 	}
@@ -72,15 +126,12 @@ func (r *WorkerRegistry) GetStats() WorkerStats {
 		Workers:      make([]WorkerStat, 0, len(r.workers)),
 	}
 
-	for workerID, lastHeartbeat := range r.workers {
+	for workerID, info := range r.workers {
 		stats.Workers = append(stats.Workers, WorkerStat{
-			ServerID:   workerID,
-			ServerName: workerID,
-			State:      "running",
-			LastSync:   lastHeartbeat,
-			SyncCount:  0,
-			ErrorCount: 0,
-			LastError:  "",
+			WorkerID:     workerID,
+			State:        "running",
+			LastSync:     info.LastHeartbeat,
+			CurrentTasks: info.CurrentTasks,
 		})
 	}
 

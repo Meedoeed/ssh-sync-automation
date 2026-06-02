@@ -212,13 +212,13 @@ func (s *BackendServer) GetWorkerStats(ctx context.Context, req *connect.Request
 	workersStats := make([]*gen.WorkerStatProto, 0, len(stats.Workers))
 	for _, w := range stats.Workers {
 		workersStats = append(workersStats, &gen.WorkerStatProto{
-			ServerId:   w.ServerID,
-			ServerName: w.ServerName,
+			ServerId:   w.WorkerID,
+			ServerName: w.WorkerID,
 			State:      w.State,
 			LastSync:   w.LastSync.Format(time.RFC3339),
-			SyncCount:  w.SyncCount,
-			ErrorCount: w.ErrorCount,
-			LastError:  w.LastError,
+			SyncCount:  int64(w.CurrentTasks),
+			ErrorCount: 0,
+			LastError:  "",
 		})
 	}
 

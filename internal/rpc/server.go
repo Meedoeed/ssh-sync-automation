@@ -71,7 +71,7 @@ func (s *BackendServer) Heartbeat(ctx context.Context, req *connect.Request[gen.
 func (s *BackendServer) GetTask(ctx context.Context, req *connect.Request[gen.GetTaskRequest]) (*connect.Response[gen.GetTaskResponse], error) {
 	s.workerRegistry.Heartbeat(req.Msg.WorkerId)
 
-	tasks, err := s.taskRepo.ListPending(ctx, 1)
+	pendingTasks, err := s.taskRepo.ListPending(ctx, 100)
 	if err != nil {
 		logger.Get().Error().Err(err).Msg("Failed to get pending tasks")
 		return connect.NewResponse(&gen.GetTaskResponse{
@@ -79,56 +79,83 @@ func (s *BackendServer) GetTask(ctx context.Context, req *connect.Request[gen.Ge
 		}), nil
 	}
 
-	if len(tasks) == 0 {
+	if len(pendingTasks) == 0 {
 		return connect.NewResponse(&gen.GetTaskResponse{
 			HasTask: false,
 		}), nil
 	}
 
-	task := tasks[0]
+	var bestTask *domain.SyncTask
+	var bestScore int = -1
+
+	for _, task := range pendingTasks {
+		score := s.calculateTaskScore(task, req.Msg.WorkerId)
+		if score > bestScore {
+			bestScore = score
+			bestTask = task
+		}
+	}
+
+	if bestTask == nil {
+		return connect.NewResponse(&gen.GetTaskResponse{
+			HasTask: false,
+		}), nil
+	}
 
 	now := time.Now()
-	task.Status = domain.StatusProcessing
-	task.StartedAt = &now
-	task.WorkerID = &req.Msg.WorkerId
+	bestTask.Status = domain.StatusProcessing
+	bestTask.StartedAt = &now
+	bestTask.WorkerID = &req.Msg.WorkerId
 
-	if err := s.taskRepo.Update(ctx, task); err != nil {
-		logger.Get().Error().Err(err).Str("task_id", task.ID.String()).Msg("Failed to reserve task")
+	if err := s.taskRepo.Update(ctx, bestTask); err != nil {
+		logger.Get().Error().Err(err).Str("task_id", bestTask.ID.String()).Msg("Failed to reserve task")
 		return connect.NewResponse(&gen.GetTaskResponse{
 			HasTask: false,
 		}), nil
 	}
 
-	server, err := s.serverRepo.GetByID(ctx, task.ServerID)
+	s.workerRegistry.IncrementTaskCount(req.Msg.WorkerId)
+
+	server, err := s.serverRepo.GetByID(ctx, bestTask.ServerID)
 	if err != nil {
-		logger.Get().Error().Err(err).Str("server_id", task.ServerID.String()).Msg("Failed to get server info")
+		logger.Get().Error().Err(err).Str("server_id", bestTask.ServerID.String()).Msg("Failed to get server info")
 	} else if server != nil {
 		logger.Get().Info().
-			Str("task_id", task.ID.String()).
+			Str("task_id", bestTask.ID.String()).
 			Str("worker_id", req.Msg.WorkerId).
-			Str("file", task.FileName).
+			Str("file", bestTask.FileName).
 			Str("server_name", server.Name).
-			Msg("Task assigned to worker")
-	} else {
-		logger.Get().Info().
-			Str("task_id", task.ID.String()).
-			Str("worker_id", req.Msg.WorkerId).
-			Str("file", task.FileName).
+			Int("worker_load", s.workerRegistry.GetWorkerLoad(req.Msg.WorkerId)).
 			Msg("Task assigned to worker")
 	}
 
 	return connect.NewResponse(&gen.GetTaskResponse{
 		HasTask: true,
 		Task: &gen.Task{
-			Id:         task.ID.String(),
-			ServerId:   task.ServerID.String(),
-			Direction:  string(task.Direction),
-			FileName:   task.FileName,
-			RemotePath: task.RemotePath,
-			LocalPath:  task.LocalPath,
-			FileSize:   task.FileSize,
+			Id:         bestTask.ID.String(),
+			ServerId:   bestTask.ServerID.String(),
+			Direction:  string(bestTask.Direction),
+			FileName:   bestTask.FileName,
+			RemotePath: bestTask.RemotePath,
+			LocalPath:  bestTask.LocalPath,
+			FileSize:   bestTask.FileSize,
 		},
 	}), nil
+}
+
+func (s *BackendServer) calculateTaskScore(task *domain.SyncTask, workerID string) int {
+	score := 0
+
+	waitTime := time.Since(task.CreatedAt)
+	score += int(waitTime.Seconds()) / 10
+
+	score += (task.MaxAttempts - task.AttemptCount) * 10
+
+	if task.Direction == domain.DirectionDownload {
+		score += 5
+	}
+
+	return score
 }
 
 func (s *BackendServer) UpdateTaskProgress(ctx context.Context, req *connect.Request[gen.UpdateProgressRequest]) (*connect.Response[gen.UpdateProgressResponse], error) {
@@ -139,6 +166,11 @@ func (s *BackendServer) UpdateTaskProgress(ctx context.Context, req *connect.Req
 			Success: false,
 		}), nil
 	}
+
+	logger.Get().Debug().
+		Str("task_id", req.Msg.TaskId).
+		Int64("bytes", req.Msg.BytesTransferred).
+		Msg("Updating task progress")
 
 	if err := s.taskRepo.UpdateProgress(ctx, taskID, req.Msg.BytesTransferred); err != nil {
 		logger.Get().Error().Err(err).Str("task_id", req.Msg.TaskId).Msg("Failed to update progress")
@@ -151,7 +183,6 @@ func (s *BackendServer) UpdateTaskProgress(ctx context.Context, req *connect.Req
 		Success: true,
 	}), nil
 }
-
 func (s *BackendServer) CompleteTask(ctx context.Context, req *connect.Request[gen.CompleteTaskRequest]) (*connect.Response[gen.CompleteTaskResponse], error) {
 	taskID, err := uuid.Parse(req.Msg.TaskId)
 	if err != nil {
@@ -175,6 +206,8 @@ func (s *BackendServer) CompleteTask(ctx context.Context, req *connect.Request[g
 			Success: false,
 		}), nil
 	}
+
+	s.workerRegistry.DecrementTaskCount(req.Msg.WorkerId)
 
 	task.Status = domain.StatusCompleted
 	task.CompletedAt = &now
@@ -224,6 +257,8 @@ func (s *BackendServer) FailTask(ctx context.Context, req *connect.Request[gen.F
 	task.CompletedAt = &now
 	errMsg := req.Msg.ErrorMessage
 	task.ErrorMessage = &errMsg
+
+	s.workerRegistry.DecrementTaskCount(req.Msg.WorkerId)
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
 		logger.Get().Error().Err(err).Str("task_id", req.Msg.TaskId).Msg("Failed to fail task")
