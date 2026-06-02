@@ -3,14 +3,17 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/Meedoeed/ssh-sync-automation/internal/config"
 	"github.com/Meedoeed/ssh-sync-automation/internal/domain"
 	"github.com/Meedoeed/ssh-sync-automation/internal/gen"
+	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure"
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	"github.com/Meedoeed/ssh-sync-automation/internal/repository"
 	"github.com/Meedoeed/ssh-sync-automation/internal/service"
@@ -166,11 +169,6 @@ func (s *BackendServer) UpdateTaskProgress(ctx context.Context, req *connect.Req
 			Success: false,
 		}), nil
 	}
-
-	logger.Get().Debug().
-		Str("task_id", req.Msg.TaskId).
-		Int64("bytes", req.Msg.BytesTransferred).
-		Msg("Updating task progress")
 
 	if err := s.taskRepo.UpdateProgress(ctx, taskID, req.Msg.BytesTransferred); err != nil {
 		logger.Get().Error().Err(err).Str("task_id", req.Msg.TaskId).Msg("Failed to update progress")
@@ -695,6 +693,37 @@ func (s *BackendServer) ReportProbeResult(ctx context.Context, req *connect.Requ
 		}), nil
 	}
 
+	var sshClient infrastructure.SSHClientInterface
+	if probeTask.TaskType == "probe_done" {
+		sshClient = infrastructure.NewSSHClient(&config.SyncCfg{
+			SSHConTimeout: 10 * time.Second,
+			SSHKeepAlive:  30 * time.Second,
+			RetryMaxAtmpt: 3,
+			RetryDelay:    5 * time.Second,
+		})
+
+		domainServer := &domain.Server{
+			ID:       server.ID,
+			Name:     server.Name,
+			Host:     server.Host,
+			Port:     server.Port,
+			Username: server.Username,
+			AuthType: server.AuthType,
+		}
+
+		if server.AuthType == "password" {
+			domainServer.Password = server.Password
+		} else if server.AuthType == "key" {
+			domainServer.PrivateKey = server.PrivateKey
+		}
+
+		if err := sshClient.Connect(domainServer); err != nil {
+			logger.Get().Warn().Err(err).Msg("Failed to connect to server for file size retrieval")
+		} else {
+			defer sshClient.Close()
+		}
+	}
+
 	for _, fileName := range req.Msg.FilesFound {
 		remotePath := remotePathPrefix + fileName
 		localPath := localPathPrefix + fileName
@@ -710,6 +739,25 @@ func (s *BackendServer) ReportProbeResult(ctx context.Context, req *connect.Requ
 			continue
 		}
 
+		var fileSize int64 = 0
+		if probeTask.TaskType == "probe_done" && sshClient != nil && sshClient.IsConnected() {
+			fullRemotePath := remotePathPrefix + fileName
+			size, sizeErr := sshClient.GetFileSize(fullRemotePath)
+			if sizeErr != nil {
+				logger.Get().Warn().Err(sizeErr).Str("file", fileName).Msg("Failed to get file size, using 0")
+			} else {
+				fileSize = size
+			}
+		} else if probeTask.TaskType == "probe_tasks" {
+
+			fullLocalPath := localPathPrefix + fileName
+			if info, statErr := os.Stat(fullLocalPath); statErr == nil {
+				fileSize = info.Size()
+			} else {
+				logger.Get().Warn().Err(statErr).Str("file", fileName).Msg("Failed to get local file size, using 0")
+			}
+		}
+
 		task := &domain.SyncTask{
 			ID:          uuid.New(),
 			ServerID:    probeTask.ServerID,
@@ -717,6 +765,7 @@ func (s *BackendServer) ReportProbeResult(ctx context.Context, req *connect.Requ
 			FileName:    fileName,
 			RemotePath:  remotePath,
 			LocalPath:   localPath,
+			FileSize:    fileSize,
 			Status:      domain.StatusPending,
 			MaxAttempts: 5,
 		}
@@ -731,6 +780,7 @@ func (s *BackendServer) ReportProbeResult(ctx context.Context, req *connect.Requ
 			Str("file", fileName).
 			Str("direction", string(direction)).
 			Str("server_name", server.Name).
+			Int64("file_size", fileSize).
 			Msg("Sync task created from probe result")
 	}
 
@@ -745,7 +795,6 @@ func (s *BackendServer) ReportProbeResult(ctx context.Context, req *connect.Requ
 	}), nil
 }
 
-// Liveness возвращает статус "alive" если сервис работает
 func (s *BackendServer) Liveness(ctx context.Context, req *connect.Request[gen.LivenessRequest]) (*connect.Response[gen.LivenessResponse], error) {
 	return connect.NewResponse(&gen.LivenessResponse{
 		Status: "alive",
