@@ -14,11 +14,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
-  ssh-sync-service:
+  backend:
     build: .
     ports:
-      - "8081:8081"
+      - "8082:8082"
+      - "9090:9090" 
     env_file:
       - .env
     volumes:
@@ -28,13 +30,40 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    command: ["./ssh-sync-service", "backend"]
+
+  scheduler:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./data/ssh:/root/.ssh
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    command: ["./ssh-sync-service", "scheduler", "--backend=http://backend:8082"]
+
+  worker:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./data/ssh:/root/.ssh
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    command: ["./ssh-sync-service", "worker", "--backend=http://backend:8082", "--data-dir=/app/data"]
 
   frontend:
     build: ./ui
     ports:
       - "3000:80"
     depends_on:
-      - ssh-sync-service
+      - backend
     restart: unless-stopped
 
 volumes:
