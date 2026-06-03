@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { SyncTask, Server } from '../types';
+import type { SyncTask, Server } from '../services/api';  // ← импорт из api.ts
 
 const Tasks = () => {
   const [tasks, setTasks] = useState<SyncTask[]>([]);
@@ -49,7 +49,6 @@ const Tasks = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-10">
-      {/* Header */}
       <div className="flex justify-between items-end">
         <div className="space-y-1">
           <h1 className="text-4xl font-light tracking-tight text-slate-900">Задачи</h1>
@@ -73,7 +72,6 @@ const Tasks = () => {
         </div>
       </div>
 
-      {/* Table Container */}
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">

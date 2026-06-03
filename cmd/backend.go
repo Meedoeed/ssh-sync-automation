@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/config"
@@ -76,9 +77,20 @@ func runBackend(cmd *cobra.Command, args []string) {
 		}
 	}()
 
+	go func() {
+		metricsMux := http.NewServeMux()
+		metricsMux.Handle("/metrics", promhttp.Handler())
+
+		log.Info().Msg("Starting Prometheus metrics server on :9090")
+		if err := http.ListenAndServe(":9090", metricsMux); err != nil {
+			log.Error().Err(err).Msg("Failed to start metrics server")
+		}
+	}()
+
 	go rpcServer.StartHeartbeatMonitor(context.Background())
 
 	log.Info().Msg("Backend RPC server started. Press Ctrl+C to stop.")
+	log.Info().Msg("Metrics available at http://localhost:9090/metrics")
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

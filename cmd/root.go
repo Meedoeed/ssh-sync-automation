@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 
 	"github.com/Meedoeed/ssh-sync-automation/internal/config"
@@ -92,6 +93,16 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 		}
 	}()
 
+	go func() {
+		metricsMux := http.NewServeMux()
+		metricsMux.Handle("/metrics", promhttp.Handler())
+
+		log.Info().Msg("Starting Prometheus metrics server on :9090")
+		if err := http.ListenAndServe(":9090", metricsMux); err != nil {
+			log.Error().Err(err).Msg("Failed to start metrics server")
+		}
+	}()
+
 	go rpcServer.StartHeartbeatMonitor(ctx)
 
 	rpcClient := genconnect.NewBackendServiceClient(
@@ -99,14 +110,12 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 		"http://localhost:8082",
 	)
 
-	// Запуск шедулера
 	schedulerCtx, schedulerCancel := context.WithCancel(ctx)
 	go func() {
 		log.Info().Msg("Starting internal scheduler")
 		runner.RunSchedulerLoop(schedulerCtx, rpcClient, cfg, "./data")
 	}()
 
-	// Запуск воркера
 	workerID := runner.GenerateWorkerID()
 	dataDir := "./data"
 
@@ -128,6 +137,8 @@ func runMonolithRPC(cmd *cobra.Command, args []string) {
 		go runner.RunTaskLoop(workerCtx, rpcClient, workerID, cfg, dataDir)
 		go runner.RunProbeTaskLoop(probeCtx, rpcClient, workerID, cfg, dataDir)
 	}()
+
+	log.Info().Msg("Monolith started. Metrics available at http://localhost:9090/metrics")
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
