@@ -1,10 +1,12 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:15-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
-      POSTGRES_DB: ssh_sync
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5433:5432"
     volumes:
@@ -15,56 +17,88 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    networks:
+      - ssh-network
 
   backend:
     build: .
     ports:
       - "8082:8082"
-      - "9090:9090" 
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
+      - nfs_shared_data:${NFS_MOUNT}
       - ./data/ssh:/root/.ssh
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
     command: ["./ssh-sync-service", "backend"]
+    networks:
+      - ssh-network
 
   scheduler:
     build: .
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
+      - nfs_shared_data:${NFS_MOUNT}
       - ./data/ssh:/root/.ssh
     depends_on:
       backend:
         condition: service_started
     restart: unless-stopped
     command: ["./ssh-sync-service", "scheduler", "--backend=http://backend:8082"]
+    networks:
+      - ssh-network
 
   worker:
     build: .
     env_file:
       - .env
+    environment:
+      - WORKER_ID=worker-${HOSTNAME}-${REPLICA:-1}
     volumes:
-      - ./data:/app/data
+      - nfs_shared_data:${NFS_MOUNT} 
       - ./data/ssh:/root/.ssh
     depends_on:
       backend:
         condition: service_started
     restart: unless-stopped
-    command: ["./ssh-sync-service", "worker", "--backend=http://backend:8082", "--data-dir=/app/data"]
+    command: ["./ssh-sync-service", "worker", "--backend=http://backend:8082", "--data-dir=${NFS_MOUNT}"]
+    networks:
+      - ssh-network
+    deploy:
+      replicas: ${WORKER_REPLICAS:-2}
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   frontend:
     build: ./ui
     ports:
       - "3000:80"
+    environment:
+      - REACT_APP_RPC_URL=http://${RPC_HOST:-localhost}:${RPC_PORT}
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - ssh-network
 
 volumes:
   postgres_data:
+    driver: local
+
+  nfs_shared_data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=${NFS_SERVER},nolock,soft,rw,timeo=30,retrans=3
+      device: ${NFS_PATH}
+
+networks:
+  ssh-network:
+    driver: bridge
