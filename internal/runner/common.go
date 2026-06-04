@@ -19,7 +19,10 @@ import (
 )
 
 func GenerateWorkerID() string {
-	return "worker-" + time.Now().Format("20060102150405")
+	uid := strings.ReplaceAll(uuid.New().String(), "-", "")
+	shortUID := uid[:8]
+	timestamp := time.Now().Format("20060102150405")
+	return fmt.Sprintf("worker-%s-%s", timestamp, shortUID)
 }
 
 func RunHeartbeat(ctx context.Context, client genconnect.BackendServiceClient, workerID string) {
