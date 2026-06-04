@@ -16,9 +16,12 @@ import type {
   WorkerStatProto,
 } from "../gen/proto/service_pb";
 
+const RPC_URL = process.env.REACT_APP_RPC_URL || "http://localhost:8082";
+
 const transport = createConnectTransport({
-    baseUrl: "http://localhost:8082",
+    baseUrl: RPC_URL,
 });
+
 
 const client = createPromiseClient(BackendService, transport);
 
