@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -17,6 +18,15 @@ import (
 	"github.com/Meedoeed/ssh-sync-automation/internal/infrastructure/logger"
 	"github.com/Meedoeed/ssh-sync-automation/proto/genconnect"
 )
+
+var (
+	fileLocks sync.Map
+)
+
+func getFileLock(path string) *sync.Mutex {
+	actual, _ := fileLocks.LoadOrStore(path, &sync.Mutex{})
+	return actual.(*sync.Mutex)
+}
 
 func GenerateWorkerID() string {
 	uid := strings.ReplaceAll(uuid.New().String(), "-", "")
@@ -224,7 +234,8 @@ func CheckLocalFiles(ctx context.Context, client genconnect.BackendServiceClient
 
 	tasksDir := dataDir + "/tasks/" + server.Name
 
-	if _, err := CheckDirExists(tasksDir); err != nil {
+	exists, err := CheckDirExists(tasksDir)
+	if err != nil || !exists {
 		log.Debug().Str("server", server.Name).Str("path", tasksDir).Msg("Tasks directory does not exist")
 		return nil
 	}
@@ -269,7 +280,6 @@ func CheckLocalFiles(ctx context.Context, client genconnect.BackendServiceClient
 			fileSize = fileInfo.Size()
 		}
 
-		// Создаём задачу (с retry)
 		for i := 0; i < 3; i++ {
 			_, err = client.CreateTask(ctx, connect.NewRequest(&gen.CreateTaskRequest{
 				ServerId:   server.Id,
@@ -472,8 +482,14 @@ func ExecuteTask(ctx context.Context, task *gen.Task, workerID string, client ge
 		remotePath := task.RemotePath
 		localPath := task.LocalPath
 
-		// Заменяем ./data на dataDir, если необходимо
 		localPath = strings.Replace(localPath, "./data", dataDir, 1)
+
+		// Проверяем существование файла с блокировкой
+		fileInfo, err := GetFileInfo(localPath)
+		if err != nil {
+			return fmt.Errorf("local file not found: %s", localPath)
+		}
+		_ = fileInfo
 
 		log.Info().Str("task_id", task.Id).Str("local_path", localPath).Str("remote_path", remotePath).Msg("Uploading file")
 
@@ -538,6 +554,10 @@ func ConnectWithRetry(sshClient infrastructure.SSHClientInterface, server *domai
 }
 
 func CheckDirExists(path string) (bool, error) {
+	lock := getFileLock(path)
+	lock.Lock()
+	defer lock.Unlock()
+
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		return false, nil
@@ -546,6 +566,10 @@ func CheckDirExists(path string) (bool, error) {
 }
 
 func ReadDirFiles(path string) ([]string, error) {
+	lock := getFileLock(path)
+	lock.Lock()
+	defer lock.Unlock()
+
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -560,6 +584,9 @@ func ReadDirFiles(path string) ([]string, error) {
 }
 
 func GetFileInfo(path string) (os.FileInfo, error) {
+	lock := getFileLock(path)
+	lock.Lock()
+	defer lock.Unlock()
 	return os.Stat(path)
 }
 
@@ -570,7 +597,12 @@ func EnsureLocalDir(localPath string) error {
 	} else if idx := strings.LastIndex(localPath, "\\"); idx != -1 {
 		dir = localPath[:idx]
 	}
+
 	if dir != localPath {
+		lock := getFileLock(dir)
+		lock.Lock()
+		defer lock.Unlock()
+
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
@@ -579,6 +611,9 @@ func EnsureLocalDir(localPath string) error {
 }
 
 func RemoveFile(path string) error {
+	lock := getFileLock(path)
+	lock.Lock()
+	defer lock.Unlock()
 	return os.Remove(path)
 }
 
@@ -675,14 +710,20 @@ func ExecuteProbeTask(ctx context.Context, task *gen.ProbeTask, workerID string,
 		}
 		log.Debug().Str("server", server.Name).Int("files", len(files)).Msg("Found files in ~/done/")
 	} else if task.TaskType == "probe_tasks" {
-		// Используем dataDir вместо хардкода ./data
 		localPath := dataDir + "/tasks/" + server.Name
-		files, err = ReadDirFiles(localPath)
-		if err != nil {
+
+		exists, err := CheckDirExists(localPath)
+		if err != nil || !exists {
 			log.Debug().Str("server", server.Name).Msg("No local tasks directory")
 			files = []string{}
 		} else {
-			log.Debug().Str("server", server.Name).Int("files", len(files)).Msg("Found files in local tasks directory")
+			files, err = ReadDirFiles(localPath)
+			if err != nil {
+				log.Debug().Str("server", server.Name).Msg("Failed to read tasks directory")
+				files = []string{}
+			} else {
+				log.Debug().Str("server", server.Name).Int("files", len(files)).Msg("Found files in local tasks directory")
+			}
 		}
 	} else {
 		return fmt.Errorf("unknown probe task type: %s", task.TaskType)

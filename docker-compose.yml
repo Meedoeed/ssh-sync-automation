@@ -15,48 +15,58 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    networks:
+      - ssh-network
 
   backend:
     build: .
     ports:
       - "8082:8082"
-      - "9090:9090" 
+      - "9090:9090"
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
-      - ./data/ssh:/root/.ssh
+      - nfs_ssh_data:/app/data
+      - nfs_ssh_data:/root/.ssh
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
     command: ["./ssh-sync-service", "backend"]
+    networks:
+      - ssh-network
 
   scheduler:
     build: .
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
-      - ./data/ssh:/root/.ssh
+      - nfs_ssh_data:/app/data
+      - nfs_ssh_data:/root/.ssh
     depends_on:
       backend:
         condition: service_started
     restart: unless-stopped
-    command: ["./ssh-sync-service", "scheduler", "--backend=http://backend:8082"]
+    command: ["./ssh-sync-service", "scheduler", "--backend=http://backend:8082", "--data-dir=/app/data"]
+    networks:
+      - ssh-network
 
   worker:
     build: .
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
-      - ./data/ssh:/root/.ssh
+      - nfs_ssh_data:/app/data
+      - nfs_ssh_data:/root/.ssh
     depends_on:
       backend:
         condition: service_started
     restart: unless-stopped
     command: ["./ssh-sync-service", "worker", "--backend=http://backend:8082", "--data-dir=/app/data"]
+    deploy:
+      replicas: 3
+    networks:
+      - ssh-network
 
   frontend:
     build: ./ui
@@ -65,6 +75,18 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - ssh-network
 
 volumes:
   postgres_data:
+  nfs_ssh_data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=${NFS_SERVER:-192.168.1.100},nolock,soft,rw
+      device: "${NFS_PATH:-:/mnt/shared/ssh-sync-data}"
+
+networks:
+  ssh-network:
+    driver: bridge
