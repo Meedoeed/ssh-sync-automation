@@ -1,10 +1,12 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:15-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
-      POSTGRES_DB: ssh_sync
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5433:5432"
     volumes:
@@ -22,12 +24,11 @@ services:
     build: .
     ports:
       - "8082:8082"
-      - "9090:9090"
     env_file:
       - .env
     volumes:
-      - nfs_ssh_data:/app/data
-      - nfs_ssh_data:/root/.ssh
+      - nfs_shared_data:${NFS_MOUNT}
+      - ./data/ssh:/root/.ssh
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,13 +42,13 @@ services:
     env_file:
       - .env
     volumes:
-      - nfs_ssh_data:/app/data
-      - nfs_ssh_data:/root/.ssh
+      - nfs_shared_data:${NFS_MOUNT}
+      - ./data/ssh:/root/.ssh
     depends_on:
       backend:
         condition: service_started
     restart: unless-stopped
-    command: ["./ssh-sync-service", "scheduler", "--backend=http://backend:8082", "--data-dir=/app/data"]
+    command: ["./ssh-sync-service", "scheduler", "--backend=http://backend:8082", "--data-dir=${NFS_MOUNT}"]
     networks:
       - ssh-network
 
@@ -55,18 +56,25 @@ services:
     build: .
     env_file:
       - .env
+    environment:
+      - WORKER_ID=worker-${HOSTNAME}-${REPLICA:-1}
     volumes:
-      - nfs_ssh_data:/app/data
-      - nfs_ssh_data:/root/.ssh
+      - nfs_shared_data:${NFS_MOUNT} 
+      - ./data/ssh:/root/.ssh
     depends_on:
       backend:
         condition: service_started
     restart: unless-stopped
-    command: ["./ssh-sync-service", "worker", "--backend=http://backend:8082", "--data-dir=/app/data"]
-    deploy:
-      replicas: 3
+    command: ["./ssh-sync-service", "worker", "--backend=http://backend:8082", "--data-dir=${NFS_MOUNT}"]
     networks:
       - ssh-network
+    deploy:
+      replicas: ${WORKER_REPLICAS:-2}
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
   frontend:
     build: ./ui
@@ -80,12 +88,14 @@ services:
 
 volumes:
   postgres_data:
-  nfs_ssh_data:
+    driver: local
+
+  nfs_shared_data:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=${NFS_SERVER:-192.168.1.100},nolock,soft,rw
-      device: "${NFS_PATH:-:/mnt/shared/ssh-sync-data}"
+      o: addr=${NFS_SERVER},nolock,soft,rw,timeo=30,retrans=3
+      device: ${NFS_PATH}
 
 networks:
   ssh-network:
