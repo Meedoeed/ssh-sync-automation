@@ -77,16 +77,17 @@ services:
           memory: 256M
 
   frontend:
-    build: ./ui
-    ports:
-      - "3000:80"
-    environment:
-      - REACT_APP_RPC_URL=http://${RPC_HOST:-localhost}:${RPC_PORT}
-    depends_on:
-      - backend
-    restart: unless-stopped
-    networks:
-      - ssh-network
+  build:
+    context: ./ui
+    args:
+      REACT_APP_RPC_URL: ${REACT_APP_RPC_URL}
+  ports:
+    - "3000:80"
+  depends_on:
+    - backend
+  restart: unless-stopped
+  networks:
+    - ssh-network
 
 volumes:
   postgres_data:
