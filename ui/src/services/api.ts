@@ -16,11 +16,12 @@ import type {
   WorkerStatProto,
 } from "../gen/proto/service_pb";
 
-const RPC_URL = process.env.REACT_APP_RPC_URL || "";
+const RPC_URL = process.env.REACT_APP_RPC_URL || "http://localhost:8082";
 
 const transport = createConnectTransport({
     baseUrl: RPC_URL,
 });
+
 
 const client = createPromiseClient(BackendService, transport);
 
@@ -42,7 +43,7 @@ export interface Server {
 export interface Worker {
   server_id: string;
   server_name: string;
-  state: 'running' | 'stopped' | 'error';
+  state: 'running' | 'stopped' | 'error'; 
   last_sync: string;
   sync_count: number;
   error_count: number;
@@ -176,14 +177,14 @@ export const api = {
   },
 
   getWorkerStats: async (): Promise<{ data: WorkerStats }> => {
-    const response = await client.getWorkerStats({}) as GetWorkerStatsResponse;
+    const response = await client.getWorkerStats({});
     return {
       data: {
         total_workers: response.totalWorkers,
-        workers: response.workers.map((w: WorkerStatProto) => ({
+        workers: response.workers.map((w) => ({
           server_id: w.serverId,
           server_name: w.serverName,
-          state: w.state as 'running' | 'stopped' | 'error',
+          state: w.state as 'running' | 'stopped' | 'error',  // ← добавлено приведение типа
           last_sync: w.lastSync,
           sync_count: Number(w.syncCount),
           error_count: Number(w.errorCount),
