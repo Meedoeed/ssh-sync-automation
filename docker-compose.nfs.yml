@@ -79,8 +79,6 @@ services:
   frontend:
     build:
       context: ./ui
-      args:
-        REACT_APP_RPC_URL: ${REACT_APP_RPC_URL}
     ports:
       - "3000:80"
     depends_on:
