@@ -1,0 +1,18 @@
+services:
+  worker:
+    build: .
+    environment:
+      - WORKER_ID=worker-${HOSTNAME}
+    volumes:
+      - nfs_shared_data:/app/data
+      - ./data/ssh:/root/.ssh
+    restart: unless-stopped
+    command: ["./ssh-sync-service", "worker", "--backend=http://192.168.1.106:8082", "--data-dir=/app/data"]
+
+volumes:
+  nfs_shared_data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=192.168.1.100,nolock,soft,rw,timeo=30,retrans=3
+      device: :/mnt/shared/ssh-sync-data
